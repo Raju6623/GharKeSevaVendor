@@ -8,7 +8,7 @@ const getImageUrl = (path) => {
     return `${BASE_URL}/${path.replace(/^\/+/, '')}`;
 };
 
-const Sidebar = ({ profile, navItems, activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen }) => {
+const Sidebar = ({ profile, navItems, activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen, jobs = [] }) => {
     return (
         <aside className={`fixed inset-y-0 left-0 z-[60] w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 lg:translate-x-0 lg:static ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <div className="flex flex-col h-full">
@@ -39,13 +39,26 @@ const Sidebar = ({ profile, navItems, activeTab, setActiveTab, isSidebarOpen, se
                 </div>
 
                 <nav className="flex-1 px-4 space-y-1">
-                    {navItems.map((item) => (
-                        <button key={item.id} onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }} className={`group w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 ${activeTab === item.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
-                            <item.icon size={20} className={`${activeTab === item.id ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'} transition-colors`} />
-                            {item.label}
-                            {activeTab === item.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-600"></div>}
-                        </button>
-                    ))}
+                    {navItems.map((item) => {
+                        const pendingJobs = (item.id === 'home') ? (jobs || []).filter(j => j.bookingStatus === 'Pending').length : 0;
+                        const unreadMessages = (item.id === 'home') ? (jobs || []).reduce((acc, j) => acc + (j.unreadCount || 0), 0) : 0;
+                        const totalBadge = pendingJobs + unreadMessages;
+
+                        return (
+                            <button key={item.id} onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }} className={`group w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 relative ${activeTab === item.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
+                                <item.icon size={20} className={`${activeTab === item.id ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'} transition-colors`} />
+                                {item.label}
+
+                                {totalBadge > 0 && item.id === 'home' && (
+                                    <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg shadow-red-100 animate-pulse">
+                                        {totalBadge}
+                                    </span>
+                                )}
+
+                                {activeTab === item.id && totalBadge === 0 && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-600"></div>}
+                            </button>
+                        );
+                    })}
                 </nav>
 
                 <div className="p-4 border-t border-slate-100">

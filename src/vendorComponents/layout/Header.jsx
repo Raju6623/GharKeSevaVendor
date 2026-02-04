@@ -73,7 +73,7 @@ const Header = ({ activeTab, isOnDuty, setIsOnDuty, setIsSidebarOpen, jobs = [],
                     <div className="relative" ref={searchRef}>
                         <button
                             onClick={() => setIsSearchOpen(!isSearchOpen)}
-                            className={`p-2.5 rounded-xl transition-all ${isSearchOpen ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                            className={`p-2.5 rounded-xl transition-all shadow-sm border ${isSearchOpen ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-200' : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'}`}
                         >
                             <Search size={20} />
                         </button>
@@ -131,11 +131,11 @@ const Header = ({ activeTab, isOnDuty, setIsOnDuty, setIsSidebarOpen, jobs = [],
                     <div className="relative" ref={notificationRef}>
                         <button
                             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                            className={`p-2.5 rounded-xl transition-all relative ${isNotificationsOpen ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                            className={`p-2.5 rounded-xl transition-all relative shadow-sm border ${isNotificationsOpen ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-200' : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'}`}
                         >
                             <Bell size={20} />
                             {notificationItems.length > 0 && (
-                                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
                             )}
                         </button>
 

@@ -189,6 +189,7 @@ function VendorPanel() {
       <Sidebar
         profile={profile} navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab}
         isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
+        jobs={jobs}
       />
 
       <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50">
@@ -223,7 +224,7 @@ function VendorPanel() {
         </main>
       </div>
 
-      <MobileNav navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} />
+      <MobileNav navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} jobs={jobs} />
 
       {/* Modals */}
       <OtpModal isOpen={!!otpModalId} otpValue={otpValue} setOtpValue={setOtpValue} onVerify={handleFinishJob} onClose={() => setOtpModalId(null)} isActionLoading={isActionLoading === otpModalId} />

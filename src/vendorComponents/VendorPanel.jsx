@@ -36,8 +36,10 @@ import {
 } from '../redux/thunks/vendorThunk';
 import { addChatMessage, addNewBooking } from '../redux/slices/vendorSlice';
 
-const socket = io('http://localhost:3001');
-const BACKEND_URL = 'http://localhost:3001';
+import { BASE_URL } from '../config';
+
+const socket = io(BASE_URL);
+const BACKEND_URL = BASE_URL;
 
 function VendorPanel() {
   const dispatch = useDispatch();

@@ -1,10 +1,11 @@
 import React from 'react';
 import { User, LogOut, X } from 'lucide-react';
+import { BASE_URL, API_URL } from '../../config';
 
 const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http') || path.startsWith('data:')) return path;
-    return `http://127.0.0.1:3001/${path.replace(/^\/+/, '')}`;
+    return `${BASE_URL}/${path.replace(/^\/+/, '')}`;
 };
 
 const Sidebar = ({ profile, navItems, activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen }) => {
@@ -55,7 +56,7 @@ const Sidebar = ({ profile, navItems, activeTab, setActiveTab, isSidebarOpen, se
                                 const axios = require('axios'); // Dynamic import or use existing if feasible, but here we might need to rely on window.axios or imported axios if added to top. 
                                 // Better to just fetch since we are in a pure component without Redux dispatch handy for thunk, 
                                 // or better yet, just use fetch.
-                                await fetch('http://localhost:3001/api/auth/vendor/logout', {
+                                await fetch(`${API_URL}/vendor/logout`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ vendorId: vendorData.id })
@@ -70,7 +71,7 @@ const Sidebar = ({ profile, navItems, activeTab, setActiveTab, isSidebarOpen, se
                         <LogOut size={20} /> Sign Out
                     </button>
                     {/* Add Version Info */}
-                    <p className="text-[10px] text-center text-slate-300 mt-2 font-mono">v1.2.0 • Test Mode</p>
+                    <p className="text-[10px] text-center text-slate-300 mt-2 font-mono">v1.2.0</p>
                 </div>
             </div>
         </aside>

@@ -1,11 +1,13 @@
 import React from 'react';
 import { User, MapPin, Briefcase, Star, Mail, Phone, Shield, CheckCircle2, CreditCard, Building, Monitor, Smartphone, Globe, Landmark, Hash, Award } from 'lucide-react';
 
+import { BASE_URL } from '../../config';
+
 const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http') || path.startsWith('data:')) return path;
     // Assuming backend is serving static files from root
-    return `http://127.0.0.1:3001/${path.replace(/^\/+/, '')}`;
+    return `${BASE_URL}/${path.replace(/^\/+/, '')}`;
 };
 
 const ProfileTab = ({ profile, setIsReviewsModalOpen }) => {

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { Tag, Plus, Trash2, Calendar, Percent, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { API_URL } from '../config';
 
 function CouponCard({ coupon }) {
     const [timeLeft, setTimeLeft] = useState({ status: 'ACTIVE', text: '' });
@@ -103,7 +104,7 @@ function VendorCoupons() {
     const fetchCoupons = async () => {
         if (!profile?.customUserId) return;
         try {
-            const res = await axios.get(`http://localhost:3001/api/auth/vendor/coupons/${profile.customUserId}`);
+            const res = await axios.get(`${API_URL}/vendor/coupons/${profile.customUserId}`);
             setCoupons(res.data);
         } catch (error) {
             console.error("Fetch Error", error);

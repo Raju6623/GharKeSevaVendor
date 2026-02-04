@@ -199,6 +199,13 @@ function VendorPanel() {
           setIsSidebarOpen={setIsSidebarOpen}
           jobs={jobs}
           history={history}
+          onSelectResult={(item) => {
+            if (jobs.some(j => j.customBookingId === item.customBookingId)) {
+              setActiveTab('home');
+            } else {
+              setActiveTab('history');
+            }
+          }}
         />
 
         <main className="p-6 lg:p-10 max-w-7xl mx-auto w-full mb-20 lg:mb-0">

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Menu, Search, Bell, X, Calendar, MessageSquare, CheckCircle2, User, ExternalLink } from 'lucide-react';
 
-const Header = ({ activeTab, isOnDuty, setIsOnDuty, setIsSidebarOpen, jobs = [], history = [] }) => {
+const Header = ({ activeTab, isOnDuty, setIsOnDuty, setIsSidebarOpen, jobs = [], history = [], onSelectResult }) => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -22,18 +22,27 @@ const Header = ({ activeTab, isOnDuty, setIsOnDuty, setIsSidebarOpen, jobs = [],
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const handleItemClick = (item) => {
+        setIsSearchOpen(false);
+        setIsNotificationsOpen(false);
+        setSearchQuery('');
+        if (onSelectResult) {
+            onSelectResult(item);
+        }
+    };
+
     // Search logic for Vendor
     const searchResults = searchQuery.length > 2 ? [
         ...jobs.filter(j =>
             j.customBookingId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             j.serviceTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             j.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
-        ).map(j => ({ id: j.customBookingId, title: j.serviceTitle, sub: j.customerName, type: 'Active Job', icon: <Calendar size={14} /> })),
+        ).map(j => ({ id: j.customBookingId, title: j.serviceTitle, sub: j.customerName, type: 'Active Job', icon: <Calendar size={14} />, raw: j })),
         ...history.filter(h =>
             h.customBookingId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             h.serviceTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             h.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
-        ).map(h => ({ id: h.customBookingId, title: h.serviceTitle, sub: h.customerName, type: 'History', icon: <CheckCircle2 size={14} /> }))
+        ).map(h => ({ id: h.customBookingId, title: h.serviceTitle, sub: h.customerName, type: 'History', icon: <CheckCircle2 size={14} />, raw: h }))
     ].slice(0, 5) : [];
 
     // Notification logic for Vendor (New bookings or unread chats)
@@ -43,7 +52,8 @@ const Header = ({ activeTab, isOnDuty, setIsOnDuty, setIsSidebarOpen, jobs = [],
             title: j.unreadCount > 0 ? 'New Message' : 'New Job Request',
             desc: j.unreadCount > 0 ? `You have ${j.unreadCount} unread messages from ${j.customerName}` : `New request for ${j.serviceTitle}`,
             type: j.unreadCount > 0 ? 'chat' : 'booking',
-            time: 'Just now'
+            time: 'Just now',
+            raw: j
         }))
     ].slice(0, 5);
 
@@ -95,7 +105,11 @@ const Header = ({ activeTab, isOnDuty, setIsOnDuty, setIsSidebarOpen, jobs = [],
                                         <p className="text-[10px] text-center text-slate-400 py-2">No results found</p>
                                     )}
                                     {searchResults.map((res, i) => (
-                                        <button key={i} className="w-full flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl transition-all group border border-transparent hover:border-slate-100">
+                                        <button
+                                            key={i}
+                                            onClick={() => handleItemClick(res.raw)}
+                                            className="w-full flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl transition-all group border border-transparent hover:border-slate-100"
+                                        >
                                             <div className="flex items-center gap-3">
                                                 <div className="p-2 bg-slate-100 rounded-lg text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
                                                     {res.icon}
@@ -139,7 +153,11 @@ const Header = ({ activeTab, isOnDuty, setIsOnDuty, setIsSidebarOpen, jobs = [],
                                         </div>
                                     ) : (
                                         notificationItems.map((item, i) => (
-                                            <button key={i} className="w-full p-4 flex gap-3 hover:bg-slate-50 transition-all border-b border-slate-50 last:border-0">
+                                            <button
+                                                key={i}
+                                                onClick={() => handleItemClick(item.raw)}
+                                                className="w-full p-4 flex gap-3 hover:bg-slate-50 transition-all border-b border-slate-50 last:border-0"
+                                            >
                                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${item.type === 'chat' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
                                                     {item.type === 'chat' ? <MessageSquare size={16} /> : <Calendar size={16} />}
                                                 </div>

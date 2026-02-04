@@ -192,7 +192,14 @@ function VendorPanel() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50">
-        <Header activeTab={activeTab} isOnDuty={isOnDuty} setIsOnDuty={setIsOnDuty} setIsSidebarOpen={setIsSidebarOpen} />
+        <Header
+          activeTab={activeTab}
+          isOnDuty={isOnDuty}
+          setIsOnDuty={setIsOnDuty}
+          setIsSidebarOpen={setIsSidebarOpen}
+          jobs={jobs}
+          history={history}
+        />
 
         <main className="p-6 lg:p-10 max-w-7xl mx-auto w-full mb-20 lg:mb-0">
           <AnimatePresence mode="wait">

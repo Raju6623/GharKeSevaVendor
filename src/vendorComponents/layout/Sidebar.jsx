@@ -1,6 +1,12 @@
 import React from 'react';
 import { User, LogOut, X } from 'lucide-react';
 
+const getImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
+    return `http://127.0.0.1:3001/${path.replace(/^\/+/, '')}`;
+};
+
 const Sidebar = ({ profile, navItems, activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen }) => {
     return (
         <aside className={`fixed inset-y-0 left-0 z-[60] w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 lg:translate-x-0 lg:static ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
@@ -18,7 +24,7 @@ const Sidebar = ({ profile, navItems, activeTab, setActiveTab, isSidebarOpen, se
                 <div className="px-4 mb-6">
                     <div onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }} className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-3 cursor-pointer hover:bg-indigo-50 hover:border-indigo-100 transition-all group">
                         <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center shrink-0 group-hover:ring-2 ring-indigo-200 transition-all">
-                            {profile?.vendorPhoto ? <img src={profile.vendorPhoto} className="w-full h-full object-cover" /> : <User size={20} className="text-slate-400 group-hover:text-indigo-500" />}
+                            {profile?.vendorPhoto ? <img src={getImageUrl(profile.vendorPhoto)} alt="Profile" className="w-full h-full object-cover" /> : <User size={20} className="text-slate-400 group-hover:text-indigo-500" />}
                         </div>
                         <div className="min-w-0">
                             <p className="font-bold text-sm text-slate-800 truncate group-hover:text-indigo-700">{profile?.firstName || 'Vendor'} {profile?.lastName}</p>

@@ -5,7 +5,7 @@ import axios from 'axios';
 const ReviewsModal = ({ isOpen, onClose, category, vendorId }) => {
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
-    const BACKEND_URL = 'http://localhost:3001';
+    const BACKEND_URL = 'https://ghar-ke-seva-backend-code.vercel.app';
 
     useEffect(() => {
         if (!isOpen) return;

@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import api from '../api/axiosConfig';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { Mail, Lock, ArrowRight, CheckCircle2, Camera, Zap, User, Eye, EyeOff, Loader2, Phone, ShieldCheck, MapPin, CreditCard, UserCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, CheckCircle2, Camera, Zap, User, Eye, EyeOff, Loader2, Phone, ShieldCheck, MapPin, CreditCard, UserCircle, X } from 'lucide-react';
+
+// ... (existing code matches until VendorAuth component start)
+
+
 
 // Aadhar Formatter (adds space every 4 digits)
 const formatAadhar = (value) => {
   const cleaned = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-  const parts = cleaned.match(/.{1,4}/g);
+  const parts = cleaned.match(/.{1, 4}/g);
   if (parts) return parts.join(' ').substring(0, 14);
   return cleaned;
 };
@@ -18,6 +23,13 @@ const VendorAuth = function () {
   const [loading, setLoading] = useState(false);
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [previews, setPreviews] = useState({
+    aadharFront: null,
+    aadharBack: null,
+    panCard: null,
+    experienceCert: null
+  });
+  const [manualEntry, setManualEntry] = useState({ local: false, permanent: false });
   const [showPassword, setShowPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -31,7 +43,7 @@ const VendorAuth = function () {
 
   const [regData, setRegData] = useState({
     firstName: '', lastName: '', userEmail: '', userPhone: '', alternatePhone: '',
-    userPassword: '', aadharNumber: '', panNumber: '',
+    userPassword: '', confirmPassword: '', aadharNumber: '', panNumber: '',
     gender: '', dob: '', experience: '',
     bankName: '', accountNumber: '', ifscCode: '',
     vendorCategory: '',
@@ -39,6 +51,10 @@ const VendorAuth = function () {
     localStreet: '', localCity: '', localState: '', localPincode: '',
     permanentStreet: '', permanentCity: '', permanentState: '', permanentPincode: '',
     vendorPhoto: null,
+    aadharFront: null,
+    aadharBack: null,
+    panCard: null,
+    experienceCert: null,
     isSameAsLocal: false
   });
 
@@ -59,12 +75,19 @@ const VendorAuth = function () {
       if (regData.localPincode.length === 6) {
         setPincodeLoading(true);
         try {
-          const res = await axios.get(`https://api.postalpincode.in/pincode/${regData.localPincode}`);
+          const res = await axios.get(`https://api.postalpincode.in/pincode/${regData.localPincode}`, { timeout: 5000 });
           if (res.data[0].Status === "Success") {
             const details = res.data[0].PostOffice[0];
             setRegData(prev => ({ ...prev, localCity: details.District, localState: details.State }));
+            setManualEntry(prev => ({ ...prev, local: false }));
+          } else {
+            throw new Error("Invalid Pincode");
           }
-        } catch (err) { console.error("Pincode fetch failed"); }
+        } catch (err) {
+          console.error("Pincode fetch failed", err);
+          setManualEntry(prev => ({ ...prev, local: true }));
+          Toast.fire({ icon: "info", title: "Enter City & State manually" });
+        }
         finally { setPincodeLoading(false); }
       }
     };
@@ -76,12 +99,19 @@ const VendorAuth = function () {
     const fetchPermAddress = async () => {
       if (regData.permanentPincode.length === 6) {
         try {
-          const res = await axios.get(`https://api.postalpincode.in/pincode/${regData.permanentPincode}`);
+          const res = await axios.get(`https://api.postalpincode.in/pincode/${regData.permanentPincode}`, { timeout: 5000 });
           if (res.data[0].Status === "Success") {
             const details = res.data[0].PostOffice[0];
             setRegData(prev => ({ ...prev, permanentCity: details.District, permanentState: details.State }));
+            setManualEntry(prev => ({ ...prev, permanent: false }));
+          } else {
+            throw new Error("Invalid Pincode");
           }
-        } catch (err) { console.error("Pincode fetch failed"); }
+        } catch (err) {
+          console.error("Pincode fetch failed", err);
+          setManualEntry(prev => ({ ...prev, permanent: true }));
+          Toast.fire({ icon: "info", title: "Enter City & State manually" });
+        }
       }
     };
     fetchPermAddress();
@@ -107,6 +137,27 @@ const VendorAuth = function () {
       reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleDocChange = (fieldname, e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setRegData(prev => ({ ...prev, [fieldname]: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => setPreviews(prev => ({ ...prev, [fieldname]: reader.result }));
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveProfilePhoto = (e) => {
+    e.preventDefault(); // Prevent label click if nested
+    setImagePreview(null);
+    setRegData(prev => ({ ...prev, vendorPhoto: null }));
+  };
+
+  const handleRemoveDoc = (fieldname) => {
+    setRegData(prev => ({ ...prev, [fieldname]: null }));
+    setPreviews(prev => ({ ...prev, [fieldname]: null }));
   };
 
   const handleSendOtp = () => {
@@ -140,6 +191,7 @@ const VendorAuth = function () {
         return false;
       }
       if (regData.userPassword.length < 6) { Toast.fire({ icon: "warning", title: "Password: Min 6 chars" }); return false; }
+      if (regData.userPassword !== regData.confirmPassword) { Toast.fire({ icon: "warning", title: "Passwords do not match" }); return false; }
     }
     if (currentStep === 3) {
       if (!regData.localStreet || !regData.localPincode || !regData.permanentStreet || !regData.permanentPincode) {
@@ -148,15 +200,19 @@ const VendorAuth = function () {
       }
     }
     if (currentStep === 4) {
-      if (regData.aadharNumber.replace(/\s+/g, '').length !== 12) { Toast.fire({ icon: "warning", title: "Aadhar: 12 digits" }); return false; }
-      if (regData.panNumber.length !== 10) { Toast.fire({ icon: "warning", title: "PAN: 10 chars" }); return false; }
+      if (regData.aadharNumber.replace(/\s+/g, '').length !== 12) { Swal.fire({ icon: "warning", title: "Invalid Aadhar", text: "Aadhar Number must be exactly 12 digits." }); return false; }
+      if (regData.panNumber.length !== 10) { Swal.fire({ icon: "warning", title: "Invalid PAN", text: "PAN Number must be 10 characters." }); return false; }
+      if (!regData.aadharFront || !regData.aadharBack || !regData.panCard || !regData.experienceCert) {
+        Swal.fire({ icon: "warning", title: "Missing Documents", text: "Please upload all 4 required KYC documents." });
+        return false;
+      }
       if (!regData.bankName || !regData.accountNumber || !regData.ifscCode) {
-        Toast.fire({ icon: "warning", title: "Bank details required" });
+        Swal.fire({ icon: "warning", title: "Missing Bank Details", text: "Please fill in all bank information." });
         return false;
       }
       // Bank account length check (standard 9-18 digits)
       if (regData.accountNumber.length < 9 || regData.accountNumber.length > 18) {
-        Toast.fire({ icon: "warning", title: "Invalid Account Number" });
+        Swal.fire({ icon: "warning", title: "Invalid Account Number", text: "Account Number must be between 9 and 18 digits." });
         return false;
       }
     }
@@ -170,6 +226,10 @@ const VendorAuth = function () {
       setCurrentStep(currentStep + 1);
       return;
     }
+
+    // Prevent double submission
+    if (loading) return;
+
     setLoading(true);
     const formData = new FormData();
     const cleanedData = {
@@ -181,14 +241,26 @@ const VendorAuth = function () {
       vendorState: regData.localState,
       vendorPincode: regData.localPincode
     };
+    const fileFields = ['vendorPhoto', 'aadharFront', 'aadharBack', 'panCard', 'experienceCert'];
     Object.keys(cleanedData).forEach(key => {
-      // Don't append empty or internal UI states
-      if (key !== 'isSameAsLocal' && cleanedData[key] !== null) {
+      // Don't append empty or internal UI states OR file fields (handled explicitly below)
+      if (!fileFields.includes(key) && key !== 'isSameAsLocal' && key !== 'confirmPassword' && cleanedData[key] !== null) {
         formData.append(key, cleanedData[key]);
       }
     });
+
+    // Explicitly append files to ensure they are caught by multer
+    if (regData.vendorPhoto) formData.append('vendorPhoto', regData.vendorPhoto);
+    if (regData.aadharFront) formData.append('aadharFront', regData.aadharFront);
+    if (regData.aadharBack) formData.append('aadharBack', regData.aadharBack);
+    if (regData.panCard) formData.append('panCard', regData.panCard);
+    if (regData.experienceCert) formData.append('experienceCert', regData.experienceCert);
     try {
-      const res = await axios.post('http://localhost:3001/api/auth/vendor/register', formData);
+      const res = await api.post('/vendor/register', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       if (res.data.success) {
         Swal.fire({ icon: 'success', title: 'Success!', text: 'Account Created. Please Login.' });
         setIsLogin(true);
@@ -210,7 +282,7 @@ const VendorAuth = function () {
     }
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:3001/api/auth/vendor/login', loginData);
+      const res = await api.post('/vendor/login', loginData);
       if (res.data.success) {
         localStorage.setItem('token', res.data.token);
         // Ensure we store the user object correctly with 'id' property
@@ -227,7 +299,27 @@ const VendorAuth = function () {
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || "Invalid credentials";
       console.error("Login Error:", err);
-      Swal.fire({ icon: 'error', title: 'Login Failed', text: errorMsg });
+
+      if (errorMsg.includes('Pending')) {
+        // Highlight Admin Message in Red if present
+        let htmlContent = `<div style="color: #334155; font-size: 14px;">Your application is currently under review by the admin team.</div>`;
+
+        if (errorMsg.includes('Admin Message:')) {
+          const parts = errorMsg.split('Admin Message:');
+          // parts[1] contains the actual note
+          htmlContent += `<div style="margin-top: 15px; color: #dc2626; font-weight: 800; font-size: 14px; background: #fef2f2; padding: 10px; border-radius: 8px; border: 1px solid #fee2e2;">ADMIN FEEDBACK: ${parts[1].trim()}</div>`;
+        }
+
+        Swal.fire({
+          icon: 'info',
+          title: 'Approval Pending',
+          html: htmlContent,
+          confirmButtonText: 'Understood',
+          confirmButtonColor: '#2563eb'
+        });
+      } else {
+        Swal.fire({ icon: 'error', title: 'Login Failed', text: errorMsg });
+      }
     } finally {
       setLoading(false);
     }
@@ -275,7 +367,7 @@ const VendorAuth = function () {
                 <div className="space-y-4">
                   <div>
                     <label className={labelClass}>Mobile Number</label>
-                    <input type="tel" value={regData.userPhone} disabled={otpSent || isMobileVerified} maxLength="10" className={inputClass} placeholder="10-digit number" onChange={e => setRegData({ ...regData, userPhone: e.target.value })} required />
+                    <input type="text" inputMode="numeric" value={regData.userPhone} disabled={otpSent || isMobileVerified} maxLength="10" className={inputClass} placeholder="10-digit number" onChange={e => setRegData({ ...regData, userPhone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })} required />
                   </div>
                   {!otpSent ? (
                     <button type="button" onClick={handleSendOtp} className="w-full py-3 bg-[#2d308b] text-white rounded font-bold">Send OTP</button>
@@ -291,10 +383,21 @@ const VendorAuth = function () {
               {currentStep === 2 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 bg-slate-50 border rounded-md flex items-center justify-center overflow-hidden shrink-0">
-                      {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" /> : <Camera size={20} className="text-slate-300" />}
+                    <div className="w-16 h-16 bg-slate-50 border rounded-md flex items-center justify-center overflow-hidden shrink-0 relative">
+                      {imagePreview ? (
+                        <>
+                          <img src={imagePreview} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={handleRemoveProfilePhoto}
+                            className="absolute top-0 right-0 bg-red-500/80 text-white p-0.5 rounded-bl-md hover:bg-red-600 transition-colors z-10"
+                          >
+                            <X size={12} />
+                          </button>
+                        </>
+                      ) : <Camera size={20} className="text-slate-300" />}
                     </div>
-                    <label className="text-[10px] font-black border-2 border-slate-200 px-4 py-2 cursor-pointer bg-white hover:border-indigo-600 transition-all uppercase tracking-widest">
+                    <label className="text-[10px] font-black border-2 border-slate-200 px-4 py-2 cursor-pointer bg-white hover:border-indigo-600 transition-all uppercase tracking-widest select-none">
                       Upload Photo *
                       <input type="file" className="hidden" accept="image/*" onChange={handlePhotoChange} />
                     </label>
@@ -304,12 +407,17 @@ const VendorAuth = function () {
                     <div><label className={labelClass}>Last Name</label><input type="text" className={inputClass} value={regData.lastName} onChange={e => setRegData({ ...regData, lastName: e.target.value })} required /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><label className={labelClass}>Gender</label><select className={inputClass} value={regData.gender} onChange={e => setRegData({ ...regData, gender: e.target.value })}><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
-                    <div><label className={labelClass}>DOB</label><input type="date" className={inputClass} value={regData.dob} onChange={e => setRegData({ ...regData, dob: e.target.value })} required /></div>
+                    <div><label className={labelClass}>Gender</label><select className={inputClass} value={regData.gender} onChange={e => setRegData({ ...regData, gender: e.target.value })}><option value="" disabled hidden>Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
+                    <div><label className={labelClass}>DOB</label><input type="date" max={new Date().toISOString().split('T')[0]} className={inputClass} value={regData.dob} onChange={e => setRegData({ ...regData, dob: e.target.value })} required /></div>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className={labelClass}>Expertise Categories (Select up to 3)</label>
+                      <div className="flex justify-between items-center">
+                        <label className={labelClass}>Expertise Categories (Select up to 3)</label>
+                        {(!regData.vendorCategories || regData.vendorCategories.length === 0) && (
+                          <span className="text-[9px] text-red-500 font-bold uppercase tracking-tighter">* Required</span>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 gap-2 mt-2">
                         {[
                           { id: 'AC', label: 'AC Specialist' },
@@ -353,14 +461,42 @@ const VendorAuth = function () {
                           );
                         })}
                       </div>
-                      {(!regData.vendorCategories || regData.vendorCategories.length === 0) && (
-                        <p className="text-[9px] text-red-400 mt-2 font-bold uppercase tracking-tighter">* Required</p>
-                      )}
                     </div>
                     <div><label className={labelClass}>Exp. (Years)</label><input type="number" className={inputClass} value={regData.experience} onChange={e => setRegData({ ...regData, experience: e.target.value })} required /></div>
                   </div>
-                  <div><label className={labelClass}>Email Address</label><input type="email" className={inputClass} value={regData.userEmail} onChange={e => setRegData({ ...regData, userEmail: e.target.value })} required /></div>
-                  <div><label className={labelClass}>Password</label><input type="password" className={inputClass} value={regData.userPassword} onChange={e => setRegData({ ...regData, userPassword: e.target.value })} required /></div>
+                  <div><label className={labelClass}>Email Address</label><input type="email" autoComplete="off" className={inputClass} value={regData.userEmail} onChange={e => setRegData({ ...regData, userEmail: e.target.value })} required /></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative">
+                      <label className={labelClass}>Password</label>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        className={inputClass}
+                        value={regData.userPassword}
+                        onChange={e => setRegData({ ...regData, userPassword: e.target.value })}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-[26px] text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <label className={labelClass}>Confirm Password</label>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        className={inputClass}
+                        value={regData.confirmPassword}
+                        onChange={e => setRegData({ ...regData, confirmPassword: e.target.value })}
+                        required
+                      />
+                      {/* Using same state for simplicity, or we can make separate state if needed. Usually users want to see both. */}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -369,9 +505,16 @@ const VendorAuth = function () {
                   {/* Local Address */}
                   <div className="space-y-4">
                     <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest border-l-4 border-indigo-600 pl-2">Current / Local Address</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className={`grid ${manualEntry.local ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
                       <div><label className={labelClass}>Pincode</label><input type="number" className={inputClass} value={regData.localPincode} onChange={e => setRegData({ ...regData, localPincode: e.target.value })} required /></div>
-                      <div><label className={labelClass}>City/State</label><input type="text" value={`${regData.localCity}${regData.localState ? ', ' + regData.localState : ''}`} readOnly className="bg-slate-50 w-full p-2.5 border rounded text-slate-500 font-bold text-xs" /></div>
+                      {manualEntry.local ? (
+                        <>
+                          <div><label className={labelClass}>City</label><input type="text" className={inputClass} value={regData.localCity} onChange={e => setRegData({ ...regData, localCity: e.target.value })} required /></div>
+                          <div><label className={labelClass}>State</label><input type="text" className={inputClass} value={regData.localState} onChange={e => setRegData({ ...regData, localState: e.target.value })} required /></div>
+                        </>
+                      ) : (
+                        <div><label className={labelClass}>City/State</label><input type="text" value={`${regData.localCity}${regData.localState ? ', ' + regData.localState : ''}`} readOnly className="bg-slate-50 w-full p-2.5 border rounded text-slate-500 font-bold text-xs" /></div>
+                      )}
                     </div>
                     <div><label className={labelClass}>Full Street Address</label><input type="text" className={inputClass} value={regData.localStreet} onChange={e => setRegData({ ...regData, localStreet: e.target.value })} required /></div>
                   </div>
@@ -384,9 +527,16 @@ const VendorAuth = function () {
                   {/* Permanent Address */}
                   <div className={`space-y-4 transition-all ${regData.isSameAsLocal ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''}`}>
                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-200 pl-2">Permanent Address</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className={`grid ${manualEntry.permanent ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
                       <div><label className={labelClass}>Pincode</label><input type="number" className={inputClass} value={regData.permanentPincode} onChange={e => setRegData({ ...regData, permanentPincode: e.target.value })} required={!regData.isSameAsLocal} /></div>
-                      <div><label className={labelClass}>City/State</label><input type="text" value={`${regData.permanentCity}${regData.permanentState ? ', ' + regData.permanentState : ''}`} readOnly className="bg-slate-50 w-full p-2.5 border rounded text-slate-500 font-bold text-xs" /></div>
+                      {manualEntry.permanent ? (
+                        <>
+                          <div><label className={labelClass}>City</label><input type="text" className={inputClass} value={regData.permanentCity} onChange={e => setRegData({ ...regData, permanentCity: e.target.value })} required={!regData.isSameAsLocal} /></div>
+                          <div><label className={labelClass}>State</label><input type="text" className={inputClass} value={regData.permanentState} onChange={e => setRegData({ ...regData, permanentState: e.target.value })} required={!regData.isSameAsLocal} /></div>
+                        </>
+                      ) : (
+                        <div><label className={labelClass}>City/State</label><input type="text" value={`${regData.permanentCity}${regData.permanentState ? ', ' + regData.permanentState : ''}`} readOnly className="bg-slate-50 w-full p-2.5 border rounded text-slate-500 font-bold text-xs" /></div>
+                      )}
                     </div>
                     <div><label className={labelClass}>Full Street Address</label><input type="text" className={inputClass} value={regData.permanentStreet} onChange={e => setRegData({ ...regData, permanentStreet: e.target.value })} required={!regData.isSameAsLocal} /></div>
                   </div>
@@ -394,15 +544,91 @@ const VendorAuth = function () {
               )}
 
               {currentStep === 4 && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <div><label className={labelClass}>Aadhar Number</label><input type="text" className={inputClass} value={regData.aadharNumber} onChange={e => setRegData({ ...regData, aadharNumber: formatAadhar(e.target.value) })} maxLength="14" placeholder="XXXX XXXX XXXX" required /></div>
-                    <div><label className={labelClass}>PAN Number</label><input type="text" maxLength="10" className={`${inputClass} uppercase`} value={regData.panNumber} onChange={e => setRegData({ ...regData, panNumber: e.target.value })} required /></div>
+                    <div>
+                      <label className={labelClass}>Aadhar Number</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className={inputClass}
+                        value={regData.aadharNumber}
+                        onChange={e => setRegData({ ...regData, aadharNumber: formatAadhar(e.target.value) })}
+                        maxLength="14"
+                        placeholder="XXXX XXXX XXXX"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>PAN Number</label>
+                      <input
+                        type="text"
+                        maxLength="10"
+                        className={`${inputClass} uppercase ${regData.panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(regData.panNumber) && regData.panNumber.length === 10 ? 'border-red-500 text-red-600 focus:border-red-500' : ''}`}
+                        value={regData.panNumber}
+                        onChange={e => setRegData({ ...regData, panNumber: e.target.value.toUpperCase() })}
+                        placeholder="ABCDE1234F"
+                        required
+                      />
+                      {regData.panNumber && regData.panNumber.length > 0 && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(regData.panNumber) && (
+                        <p className="text-[9px] text-red-500 mt-1 font-bold">
+                          {regData.panNumber.length < 10 ? `${regData.panNumber.length}/10 Characters` : 'Invalid Format (Ex: ABCDE1234F)'}
+                        </p>
+                      )}
+                    </div>
                   </div>
+
+                  {/* KYC Document Uploads */}
+                  <div className="pt-4 border-t border-slate-100">
+                    <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-4">KYC Documents (Required)</h4>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+                      {[
+                        { id: 'aadharFront', label: 'Aadhar Front' },
+                        { id: 'aadharBack', label: 'Aadhar Back' },
+                        { id: 'panCard', label: 'PAN Card' },
+                        { id: 'experienceCert', label: 'Exp. Certificate' }
+                      ].map(doc => (
+                        <div key={doc.id} className="space-y-2">
+                          <label className={labelClass}>{doc.label}</label>
+                          <div className="relative group">
+                            <div className="w-full h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center overflow-hidden transition-all group-hover:border-indigo-400 relative">
+                              {previews[doc.id] ? (
+                                <>
+                                  <img src={previews[doc.id]} className="w-full h-full object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveDoc(doc.id)}
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-all z-20"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </>
+                              ) : (
+                                <Camera size={20} className="text-slate-300 mb-1" />
+                              )}
+                              <input
+                                type="file"
+                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                accept="image/*"
+                                onChange={(e) => handleDocChange(doc.id, e)}
+                                title={previews[doc.id] ? "Click to replace" : "Click to upload"}
+                              />
+                            </div>
+                            {previews[doc.id] && (
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl pointer-events-none">
+                                <span className="text-white text-[8px] font-bold uppercase tracking-widest">Change</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="space-y-4 pt-4 border-t border-slate-100">
                     <h4 className="text-xs font-bold text-slate-400 uppercase">Settlement Bank</h4>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><label className={labelClass}>Bank Name</label><input type="text" className={inputClass} value={regData.bankName} onChange={e => setRegData({ ...regData, bankName: e.target.value })} required /></div>
+                      <div><label className={labelClass}>Bank Name</label><input type="text" className={`${inputClass} uppercase`} value={regData.bankName} onChange={e => setRegData({ ...regData, bankName: e.target.value.toUpperCase() })} required /></div>
                       <div><label className={labelClass}>IFSC Code</label><input type="text" maxLength="11" className={`${inputClass} uppercase`} value={regData.ifscCode} onChange={e => setRegData({ ...regData, ifscCode: e.target.value })} required /></div>
                     </div>
                     <div>
@@ -417,17 +643,49 @@ const VendorAuth = function () {
 
               {currentStep > 1 && (
                 <div className="flex gap-4 pt-4 border-t mt-8">
-                  <button type="button" onClick={() => setCurrentStep(currentStep - 1)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded font-bold hover:bg-slate-200">Back</button>
-                  <button type="submit" className="flex-[2] py-3 bg-indigo-600 text-white rounded font-bold shadow-indigo-100 shadow-lg hover:bg-indigo-700">
-                    {currentStep === 4 ? 'Submit Application' : 'Next Step'}
+                  <button type="button" disabled={loading} onClick={() => setCurrentStep(currentStep - 1)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded font-bold hover:bg-slate-200 transition-colors disabled:opacity-50">Back</button>
+                  <button type="submit" disabled={loading} className="flex-[2] py-3 bg-indigo-600 text-white rounded font-bold shadow-indigo-100 shadow-lg hover:bg-indigo-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    {loading ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      currentStep === 4 ? 'Submit Application' : 'Next Step'
+                    )}
                   </button>
                 </div>
               )}
             </form>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div><label className={labelClass}>Email</label><input type="email" required className={inputClass} onChange={e => setLoginData({ ...loginData, userEmail: e.target.value })} /></div>
-              <div><label className={labelClass}>Password</label><input type="password" required className={inputClass} onChange={e => setLoginData({ ...loginData, userPassword: e.target.value })} /></div>
+            <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
+              <div>
+                <label className={labelClass}>Email or Mobile Number</label>
+                <input
+                  type="text"
+                  required
+                  autoComplete="off"
+                  className={inputClass}
+                  onChange={e => setLoginData({ ...loginData, userEmail: e.target.value })}
+                />
+              </div>
+              <div className="relative">
+                <label className={labelClass}>Password</label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoComplete="new-password"
+                  className={inputClass}
+                  onChange={e => setLoginData({ ...loginData, userPassword: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-[26px] text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <button type="submit" disabled={loading} className="w-full py-4 bg-[#2d308b] text-white rounded font-bold mt-4 uppercase tracking-widest text-xs">Sign In</button>
             </form>
           )}

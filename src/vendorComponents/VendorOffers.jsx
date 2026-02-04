@@ -84,7 +84,7 @@ const VendorOffers = () => {
                             <div className="relative rounded-[3rem] overflow-hidden shadow-2xl group h-[400px]">
                                 {vendorCoupons[currentIndex].offerImage ? (
                                     <img
-                                        src={vendorCoupons[currentIndex].offerImage.startsWith('http') ? vendorCoupons[currentIndex].offerImage : `http://localhost:3001${vendorCoupons[currentIndex].offerImage}`}
+                                        src={vendorCoupons[currentIndex].offerImage.startsWith('http') ? vendorCoupons[currentIndex].offerImage : `https://ghar-ke-seva-backend-code.vercel.app${vendorCoupons[currentIndex].offerImage}`}
                                         alt={vendorCoupons[currentIndex].code}
                                         className="w-full h-full object-cover transition duration-700 group-hover:scale-110"
                                     />

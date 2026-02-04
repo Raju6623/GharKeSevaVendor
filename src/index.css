@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@layer base {
+
+    /* Hide default browser password toggle on Edge/IE */
+    input::-ms-reveal,
+    input::-ms-clear {
+        display: none;
+    }
+}

@@ -30,16 +30,19 @@ export const fetchCommunityPosts = () => async (dispatch) => {
     }
 };
 
-export const createCommunityPost = (formData) => async (dispatch) => {
+export const createCommunityPost = (postData, isJson = false) => async (dispatch) => {
     try {
-        await api.post('/community/posts/add', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const config = isJson
+            ? { headers: { 'Content-Type': 'application/json' } }
+            : { headers: { 'Content-Type': 'multipart/form-data' } };
+
+        await api.post('/community/posts/add', postData, config);
         dispatch(fetchCommunityPosts());
         return { success: true };
     } catch (e) {
         console.error("Create Post Error:", e);
-        return { success: false };
+        const errorMsg = e.response?.data?.error || e.response?.data?.message || "Failed to create post";
+        return { success: false, message: errorMsg };
     }
 };
 

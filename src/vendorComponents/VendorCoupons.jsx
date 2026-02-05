@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
-import { Tag, Plus, Trash2, Calendar, Percent, Image as ImageIcon } from 'lucide-react';
+import { Tag, Trash2, Calendar, Percent, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 

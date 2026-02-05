@@ -39,19 +39,28 @@ const GSParivaarTab = ({ profile }) => {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('type', 'user_post');
-        formData.append('authorId', profile?.customUserId);
-        formData.append('authorName', `${profile?.firstName} ${profile?.lastName}`);
-        formData.append('authorRole', 'Partner');
-        formData.append('authorImg', profile?.vendorPhoto);
-        formData.append('title', newPost.title);
-        formData.append('content', newPost.content);
+        const baseData = {
+            type: 'user_post',
+            authorId: profile?.customUserId,
+            authorName: `${profile?.firstName} ${profile?.lastName}`,
+            authorRole: 'Partner',
+            authorImg: profile?.vendorPhoto,
+            title: newPost.title,
+            content: newPost.content
+        };
+
+        let result;
+
         if (selectedImage) {
+            const formData = new FormData();
+            Object.keys(baseData).forEach(key => formData.append(key, baseData[key]));
             formData.append('image', selectedImage);
+
+            result = await dispatch(createCommunityPost(formData, false));
+        } else {
+            result = await dispatch(createCommunityPost(baseData, true));
         }
 
-        const result = await dispatch(createCommunityPost(formData));
         if (result.success) {
             setIsPosting(false);
             setNewPost({ title: '', content: '' });
@@ -59,7 +68,32 @@ const GSParivaarTab = ({ profile }) => {
             setPreviewUrl(null);
             Swal.fire('Success', 'Your post has been shared with the community!', 'success');
         } else {
-            Swal.fire('Error', 'Failed to create post', 'error');
+            // Check if error is related to image upload
+            if (selectedImage && (result.message.toLowerCase().includes('upload') || result.message.toLowerCase().includes('cloudinary') || result.message.toLowerCase().includes('image'))) {
+                const retry = await Swal.fire({
+                    title: 'Image Upload Failed',
+                    text: `Server error: ${result.message}. Do you want to post WITHOUT the image?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Post Text Only',
+                    cancelButtonText: 'Cancel'
+                });
+
+                if (retry.isConfirmed) {
+                    result = await dispatch(createCommunityPost(baseData, true)); // Retry as JSON
+                    if (result.success) {
+                        setIsPosting(false);
+                        setNewPost({ title: '', content: '' });
+                        setSelectedImage(null);
+                        setPreviewUrl(null);
+                        Swal.fire('Success', 'Posted successfully (without image).', 'success');
+                    } else {
+                        Swal.fire('Error', result.message, 'error');
+                    }
+                }
+            } else {
+                Swal.fire('Error', result.message, 'error');
+            }
         }
     };
 
@@ -249,9 +283,13 @@ const GSParivaarTab = ({ profile }) => {
 
 const PostCard = ({ post, profile }) => {
     const dispatch = useDispatch();
-    const [likes, setLikes] = useState(post.likes?.length || 0);
+    const [likes, setLikes] = useState(typeof post.likes === 'number' ? post.likes : (post.likedBy?.length || 0));
     const [claps, setClaps] = useState(post.claps || 0);
-    const [isLiked, setIsLiked] = useState(post.likes?.includes(profile?.customUserId));
+    // Schema uses 'likedBy' array for user IDs, 'likes' is a number counter.
+    // However, my backend schema update added: likes: Number, likedBy: [String]
+    // The previous error suggests post.likes is NOT an array (it's a number from my schema update).
+    // So .includes() failed. We need to check post.likedBy
+    const [isLiked, setIsLiked] = useState(post.likedBy?.includes(profile?.customUserId));
 
     const handleLike = () => {
         if (!profile?.customUserId) return;

@@ -95,7 +95,7 @@ function VendorHome() {
                             <div className="bg-slate-100 aspect-[4/3] relative flex items-center justify-center">
                                 <img
                                     src="/VendorHomePageImage.png"
-                                    alt="Vendor Dashboard Preview"
+                                    alt="GKS Partner Dashboard Preview"
                                     className="w-full h-full object-cover"
                                 />
                             </div>

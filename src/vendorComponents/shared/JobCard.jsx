@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { User, Phone, MapPin, Clock, MessageCircle, CheckCircle2, KeyRound, Map, Loader2, Calendar } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-const JobCard = ({ job, onChat, onAccept, onComplete, isActionLoading }) => {
+const JobCard = ({ job, onChat, onAccept, onReject, onComplete, isActionLoading }) => {
 
     const getTheme = () => {
         if (job.bookingStatus === 'Pending') return {
@@ -159,12 +159,23 @@ const JobCard = ({ job, onChat, onAccept, onComplete, isActionLoading }) => {
                             {isActionLoading === job.customBookingId ? <Loader2 className="animate-spin" size={18} /> : <>Accept Job <CheckCircle2 size={18} /></>}
                         </button>
                     ) : job.bookingStatus === 'In Progress' ? (
-                        <button
-                            onClick={() => handleCompleteEffect(job.customBookingId)}
-                            className="flex-1 py-4 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-slate-900/30 hover:bg-emerald-600 hover:shadow-emerald-500/40 transition-all active:scale-95 flex items-center justify-center gap-2"
-                        >
-                            Complete Job <KeyRound size={18} />
-                        </button>
+                        <div className="flex-1 flex gap-2">
+                            <button
+                                onClick={() => handleCompleteEffect(job.customBookingId)}
+                                disabled={isActionLoading === job.customBookingId}
+                                className="flex-[2] py-4 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-slate-900/30 hover:bg-emerald-600 hover:shadow-emerald-500/40 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {isActionLoading === job.customBookingId ? <Loader2 className="animate-spin" size={18} /> : <>Finish <KeyRound size={18} /></>}
+                            </button>
+                            <button
+                                onClick={() => onReject(job.customBookingId)}
+                                disabled={isActionLoading === job.customBookingId}
+                                className="flex-1 py-4 bg-red-50 text-red-600 rounded-xl font-black text-[10px] uppercase tracking-tighter border border-red-100 hover:bg-red-100 transition-all flex flex-col items-center justify-center leading-none"
+                                title="Pass job to other vendors"
+                            >
+                                Pass <span className="text-[8px] mt-0.5 opacity-60 font-medium">Job</span>
+                            </button>
+                        </div>
                     ) : null}
 
                     <button

@@ -3,7 +3,8 @@ import api from '../api/axiosConfig';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { Mail, Lock, ArrowRight, CheckCircle2, Camera, Zap, User, Eye, EyeOff, Loader2, Phone, ShieldCheck, MapPin, CreditCard, UserCircle, X } from 'lucide-react';
+import { Mail, Lock, ArrowRight, CheckCircle2, Camera, Zap, User, Eye, EyeOff, Loader2, Phone, ShieldCheck, MapPin, CreditCard, UserCircle, X, RefreshCw } from 'lucide-react';
+import CameraModal from '../components/CameraModal';
 
 // ... (existing code matches until VendorAuth component start)
 
@@ -32,6 +33,8 @@ const VendorAuth = function () {
   const [manualEntry, setManualEntry] = useState({ local: false, permanent: false });
   const [showPassword, setShowPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const mobileCameraRef = React.useRef(null);
 
   // OTP States
   const [otpSent, setOtpSent] = useState(false);
@@ -129,13 +132,23 @@ const VendorAuth = function () {
     }));
   };
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setRegData({ ...regData, vendorPhoto: file });
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
+  const handlePhotoCapture = (dataUrl) => {
+    setImagePreview(dataUrl);
+    // Convert base64 to file for form transparency
+    fetch(dataUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], "profile.jpg", { type: "image/jpeg" });
+        setRegData(prev => ({ ...prev, vendorPhoto: file }));
+      });
+  };
+
+  const openCamera = () => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      mobileCameraRef.current.click();
+    } else {
+      setIsCameraOpen(true);
     }
   };
 
@@ -337,7 +350,7 @@ const VendorAuth = function () {
           <div>
             <div className="flex items-center gap-2 mb-8">
               <CheckCircle2 size={24} />
-              <span className="font-bold text-xl uppercase tracking-tighter">VendorPro</span>
+              <span className="font-bold text-xl uppercase tracking-tighter">GKS Partner</span>
             </div>
             <h2 className="text-3xl font-bold mb-4">Partner Registration</h2>
             <p className="text-indigo-100/60 text-sm">Join our network of skilled professionals.</p>
@@ -352,6 +365,13 @@ const VendorAuth = function () {
               {isLogin ? 'Join Now' : 'Back to Login'}
             </button>
           </div>
+
+          <CameraModal
+            isOpen={isCameraOpen}
+            onClose={() => setIsCameraOpen(false)}
+            onCapture={handlePhotoCapture}
+            title="Profile Identity Scan"
+          />
 
           {!isLogin ? (
             <form onSubmit={handleRegister} className="space-y-6">
@@ -382,25 +402,43 @@ const VendorAuth = function () {
 
               {currentStep === 2 && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 bg-slate-50 border rounded-md flex items-center justify-center overflow-hidden shrink-0 relative">
-                      {imagePreview ? (
-                        <>
-                          <img src={imagePreview} className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={handleRemoveProfilePhoto}
-                            className="absolute top-0 right-0 bg-red-500/80 text-white p-0.5 rounded-bl-md hover:bg-red-600 transition-colors z-10"
-                          >
-                            <X size={12} />
-                          </button>
-                        </>
-                      ) : <Camera size={20} className="text-slate-300" />}
+                  <div className="flex flex-col gap-4 mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-20 bg-slate-50 border-2 border-slate-100 rounded-3xl flex items-center justify-center overflow-hidden shrink-0 relative shadow-inner">
+                        {imagePreview ? (
+                          <>
+                            <img src={imagePreview} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={handleRemoveProfilePhoto}
+                              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors z-10 shadow-lg"
+                            >
+                              <X size={12} />
+                            </button>
+                          </>
+                        ) : <UserCircle size={32} className="text-slate-200" />}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={openCamera}
+                          className="flex items-center gap-2 px-6 py-3 bg-[#2d308b] text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-100 hover:shadow-indigo-200 transition-all active:scale-95"
+                        >
+                          <Camera size={14} /> Take Live Photo *
+                        </button>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Your face must be clear for approval</p>
+                      </div>
                     </div>
-                    <label className="text-[10px] font-black border-2 border-slate-200 px-4 py-2 cursor-pointer bg-white hover:border-indigo-600 transition-all uppercase tracking-widest select-none">
-                      Upload Photo *
-                      <input type="file" className="hidden" accept="image/*" onChange={handlePhotoChange} />
-                    </label>
+                    {/* Hidden input for mobile camera or fallback upload */}
+                    <input type="file" ref={mobileCameraRef} className="hidden" accept="image/*" capture="user" onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setRegData(prev => ({ ...prev, vendorPhoto: file }));
+                        const reader = new FileReader();
+                        reader.onloadend = () => setImagePreview(reader.result);
+                        reader.readAsDataURL(file);
+                      }
+                    }} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div><label className={labelClass}>First Name</label><input type="text" className={inputClass} value={regData.firstName} onChange={e => setRegData({ ...regData, firstName: e.target.value })} required /></div>

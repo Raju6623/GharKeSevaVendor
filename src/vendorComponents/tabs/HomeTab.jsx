@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Briefcase, Zap, Calendar, TrendingUp } from 'lucide-react';
+import { Briefcase, Zap, Calendar, TrendingUp, Cake } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchIncentives } from '../../redux/thunks/vendorThunk';
 import JobCard from '../shared/JobCard';
 import IncentiveCard from '../IncentiveCard';
 
-const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept, onComplete, isActionLoading }) => {
+const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept, onReject, onComplete, isActionLoading }) => {
     const dispatch = useDispatch();
     const { incentives } = useSelector(state => state.vendor);
     const activeJobs = jobs.filter(j => j.bookingStatus !== 'Completed');
@@ -19,8 +19,35 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
 
     const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
+    // Birthday Logic
+    const isBirthdayToday = () => {
+        if (!profile?.dob) return false;
+        const bday = new Date(profile.dob);
+        const today = new Date();
+        return bday.getDate() === today.getDate() && bday.getMonth() === today.getMonth();
+    };
+
     return (
         <div className="space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+            {/* Birthday Wish Banner */}
+            {isBirthdayToday() && (
+                <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 p-8 text-white shadow-2xl border-4 border-white">
+                    <div className="absolute top-0 right-0 p-4 opacity-20">
+                        <Cake size={120} />
+                    </div>
+                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                        <div className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-[2rem] flex items-center justify-center text-4xl shadow-lg border border-white/30 animate-bounce">
+                            🎂
+                        </div>
+                        <div className="text-center md:text-left">
+                            <h2 className="text-3xl font-black tracking-tight italic uppercase">Happy Birthday, {profile?.firstName}! 🎊</h2>
+                            <p className="text-rose-50 font-bold mt-1 text-sm md:text-base">GharKeSeva parivaar ki aur se aapko janamdin ki dheron shubhkamnayein. Aapka din shubh ho!</p>
+                        </div>
+                    </div>
+                    {/* Floating Particles/Shapes could be added here with motion */}
+                </div>
+            )}
 
             {/* Hero Section */}
             <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[#1e1b4b] via-[#2d308b] to-[#4338ca] text-white shadow-2xl shadow-indigo-900/20">
@@ -104,6 +131,7 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
                                 job={job}
                                 onChat={onChat}
                                 onAccept={onAccept}
+                                onReject={onReject}
                                 onComplete={onComplete}
                                 isActionLoading={isActionLoading}
                             />

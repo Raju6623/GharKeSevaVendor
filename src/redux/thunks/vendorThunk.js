@@ -7,8 +7,65 @@ import {
     setHistory,
     markChatAsRead,
     setVendorCoupons,
-    setIncentives
+    setIncentives,
+    updateProfile,
+    setCommunityPosts
 } from '../slices/vendorSlice';
+
+export const fetchCommunityPosts = () => async (dispatch) => {
+    try {
+        const res = await api.get('/community/posts');
+        dispatch(setCommunityPosts(Array.isArray(res.data) ? res.data : (res.data.success && Array.isArray(res.data.data) ? res.data.data : [])));
+        // Handling the case where response might be {success: true, ...posts} or just array
+        if (res.data && res.data.success && !Array.isArray(res.data)) {
+            // Re-fetch logic if needed or just use res.data directly if it has the posts
+            // Based on my controller, sendResponse sends {success: true, ...data} 
+            // if data is NOT an array. If it IS an array, it sends the array.
+            // My fetchCommunityPosts returns CommunityPost.find()... which is an array.
+            // So res.data SHOULD be an array.
+        }
+    } catch (e) {
+        console.error("Fetch Community Posts Error:", e);
+        dispatch(setCommunityPosts([]));
+    }
+};
+
+export const createCommunityPost = (formData) => async (dispatch) => {
+    try {
+        await api.post('/community/posts/add', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        dispatch(fetchCommunityPosts());
+        return { success: true };
+    } catch (e) {
+        console.error("Create Post Error:", e);
+        return { success: false };
+    }
+};
+
+export const likePost = (postId, userId) => async (dispatch) => {
+    try {
+        await api.post(`/community/posts/like/${postId}`, { userId });
+        // Optionally update local state for faster response
+    } catch (e) { console.error("Like Error:", e); }
+};
+
+export const clapPost = (postId) => async (dispatch) => {
+    try {
+        await api.post(`/community/posts/clap/${postId}`);
+    } catch (e) { console.error("Clap Error:", e); }
+};
+
+export const deletePost = (postId, authorId) => async (dispatch) => {
+    try {
+        await api.delete(`/community/posts/${postId}?authorId=${authorId}`);
+        dispatch(fetchCommunityPosts());
+        return { success: true };
+    } catch (e) {
+        console.error("Delete Post Error:", e);
+        return { success: false };
+    }
+};
 
 export const fetchJobs = (vendorId, pos, silent = false) => async (dispatch) => {
     if (!vendorId) return;
@@ -30,6 +87,23 @@ export const fetchFullProfile = (vendorId) => async (dispatch) => {
     } catch (e) { console.error("Fetch Profile Error:", e); }
 };
 
+export const updateVendorProfile = (vendorId, updateData) => async (dispatch) => {
+    dispatch(setActionLoading('profile-update'));
+    // Immediate local update for instant UI response
+    dispatch(updateProfile(updateData));
+
+    try {
+        await api.put(`/vendor/update-profile/${vendorId}`, updateData);
+        await dispatch(fetchFullProfile(vendorId));
+        return { success: true };
+    } catch (e) {
+        console.error("Update Profile Error:", e);
+        return { success: false, message: e.response?.data?.message || "Failed to update profile" };
+    } finally {
+        dispatch(setActionLoading(null));
+    }
+};
+
 export const fetchHistory = (vendorId) => async (dispatch) => {
     try {
         const res = await api.get(`/vendor/history/${vendorId}`);
@@ -38,12 +112,23 @@ export const fetchHistory = (vendorId) => async (dispatch) => {
 };
 
 export const updateJobStatus = (bookingId, vendorId, action) => async (dispatch) => {
-    const status = action === 'accept' ? 'In Progress' : 'Cancelled';
+    let status;
+    let assignedId = vendorId;
+
+    if (action === 'accept') {
+        status = 'In Progress';
+    } else if (action === 'reject') {
+        status = 'Pending';
+        assignedId = null;
+    } else {
+        status = 'Cancelled';
+    }
+
     dispatch(setActionLoading(bookingId));
     try {
         await api.put(`/vendor/update-job/${bookingId}`, {
             bookingStatus: status,
-            assignedVendorId: vendorId
+            assignedVendorId: assignedId
         });
         dispatch(fetchJobs(vendorId));
     } catch (e) { alert("Failed to update job status"); }

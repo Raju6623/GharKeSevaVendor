@@ -12,6 +12,8 @@ const initialState = {
     teamMembers: [],
     language: 'English',
     communityPosts: [],
+    transactions: [],
+    withdrawals: [],
 };
 
 const vendorSlice = createSlice({
@@ -103,6 +105,12 @@ const vendorSlice = createSlice({
         setCommunityPosts: (state, action) => {
             state.communityPosts = action.payload;
         },
+        setTransactions: (state, action) => {
+            state.transactions = action.payload;
+        },
+        setWithdrawals: (state, action) => {
+            state.withdrawals = action.payload;
+        }
     },
 });
 
@@ -122,7 +130,9 @@ export const {
     setLanguage,
     updateProfile,
     setTeamMembers,
-    setCommunityPosts
+    setCommunityPosts,
+    setTransactions,
+    setWithdrawals
 } = vendorSlice.actions;
 
 export default vendorSlice.reducer;

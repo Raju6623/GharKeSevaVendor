@@ -3,7 +3,7 @@ import axios from 'axios'; // Still needed for one-off location post if not in t
 import { io } from 'socket.io-client';
 import Swal from 'sweetalert2';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LayoutDashboard, History, IndianRupee, User, Loader2, Tag, HelpCircle, Share2, ShoppingBag, Users, Briefcase, X, CheckCircle2, CreditCard, MessageSquare, Languages, Headset, FileText, ShieldCheck, Scale, Star, Download, Sparkles, Heart, Camera } from 'lucide-react'; // Added Tag for My Offers
+import { LayoutDashboard, History, IndianRupee, Wallet, User, Loader2, Tag, HelpCircle, Share2, ShoppingBag, Users, Briefcase, X, CheckCircle2, CreditCard, MessageSquare, Languages, Headset, FileText, ShieldCheck, Scale, Star, Download, Sparkles, Heart, Camera } from 'lucide-react'; // Added Tag for My Offers
 import { useDispatch, useSelector } from 'react-redux';
 
 // Layout & Navigation
@@ -22,6 +22,7 @@ import MyTeamTab from './tabs/MyTeamTab';
 import MyHubTab from './tabs/MyHubTab';
 import GSParivaarTab from './tabs/GSParivaarTab';
 import VendorCoupons from './VendorCoupons';
+import WalletTab from './tabs/WalletTab';
 import { WhatsAppModal, LanguageModal } from './modals/UtilityModals';
 import translations from '../utils/translations';
 import { setLanguage } from '../redux/slices/vendorSlice';
@@ -305,7 +306,7 @@ function VendorPanel() {
     { id: 'home', label: t.home, icon: LayoutDashboard },
     { id: 'history', label: t.history, icon: History },
     { id: 'team', label: t.team, icon: Users },
-    { id: 'dashboard', label: t.credits, icon: IndianRupee },
+    { id: 'wallet', label: t.wallet, icon: Wallet },
     { id: 'hub', label: t.hub, icon: Briefcase },
     { id: 'parivaar', label: t.parivaar, icon: Sparkles },
     { id: 'offers', label: t.offers, icon: Tag },
@@ -355,7 +356,7 @@ function VendorPanel() {
 
   const mobileNavItems = [
     { id: 'team', label: t.team, icon: Users },
-    { id: 'dashboard', label: t.credits, icon: IndianRupee },
+    { id: 'wallet', label: t.wallet, icon: Wallet },
     { id: 'home', label: t.home, icon: LayoutDashboard },
     { id: 'offers', label: t.offers, icon: Tag },
     { id: 'history', label: t.history, icon: History },
@@ -401,12 +402,13 @@ function VendorPanel() {
             {loading ? <div className="flex justify-center py-32"><Loader2 className="animate-spin text-indigo-600" size={40} /></div> : (
               <motion.div key={`tab-${activeTab}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                 {activeTab === 'home' && <HomeTab {...{ profile, jobs, showAllJobs, setShowAllJobs, onChat: openChat, onAccept: (id) => handleBookingAction(id, 'accept'), onReject: (id) => handleBookingAction(id, 'reject'), onComplete: setOtpModalId, isActionLoading }} />}
+                {activeTab === 'wallet' && <WalletTab profile={profile} onBack={() => setActiveTab('home')} />}
                 {activeTab === 'dashboard' && <StatsTab {...{ profile, history, jobs }} />}
                 {activeTab === 'history' && <HistoryTab history={history} />}
                 {activeTab === 'offers' && <VendorCoupons />} {/* New Tab Render */}
                 {activeTab === 'profile' && <ProfileTab profile={profile} setIsReviewsModalOpen={setIsReviewsModalOpen} setActiveTab={setActiveTab} setIsCatModalOpen={setIsCatModalOpen} />}
                 {activeTab === 'help' && <HelpCenterTab profile={profile} />}
-                {activeTab === 'financial' && <FinancialDetailsTab profile={profile} onBack={() => setActiveTab('home')} />}
+                {activeTab === 'financial' && <FinancialDetailsTab profile={profile} onBack={() => setActiveTab('home')} onGoToWallet={() => setActiveTab('wallet')} />}
                 {activeTab === 'team' && <MyTeamTab onBack={() => setActiveTab('home')} />}
                 {activeTab === 'hub' && <MyHubTab profile={profile} onBack={() => setActiveTab('home')} />}
                 {activeTab === 'parivaar' && <GSParivaarTab profile={profile} />}

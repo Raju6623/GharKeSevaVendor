@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 import { useSelector } from 'react-redux';
 import translations from '../../utils/translations';
 
-const FinancialDetailsTab = ({ profile, onBack }) => {
+const FinancialDetailsTab = ({ profile, onBack, onGoToWallet }) => {
     const dispatch = useDispatch();
     const { language } = useSelector(state => state.vendor);
     const t = translations[language] || translations.English;
@@ -163,7 +163,10 @@ const FinancialDetailsTab = ({ profile, onBack }) => {
                                         <p className="text-2xl font-black tabular-nums tracking-tighter">₹{profile?.totalEarnings || '0'}</p>
                                     </div>
                                 </div>
-                                <button className="mt-10 w-full py-4 bg-white text-[#0c8182] rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-xl">
+                                <button
+                                    onClick={onGoToWallet}
+                                    className="mt-10 w-full py-4 bg-white text-[#0c8182] rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-xl"
+                                >
                                     See Statement
                                 </button>
                             </div>

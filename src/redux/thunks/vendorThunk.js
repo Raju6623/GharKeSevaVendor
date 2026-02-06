@@ -9,8 +9,39 @@ import {
     setVendorCoupons,
     setIncentives,
     updateProfile,
-    setCommunityPosts
+    setCommunityPosts,
+    setTransactions,
+    setWithdrawals
 } from '../slices/vendorSlice';
+
+export const fetchTransactions = (vendorId) => async (dispatch) => {
+    try {
+        const res = await api.get(`/wallet/transactions/${vendorId}`);
+        dispatch(setTransactions(Array.isArray(res.data) ? res.data : []));
+    } catch (e) { console.error("Fetch Transactions Error:", e); }
+};
+
+export const fetchWithdrawals = (vendorId) => async (dispatch) => {
+    try {
+        const res = await api.get(`/wallet/withdrawals/${vendorId}`);
+        dispatch(setWithdrawals(Array.isArray(res.data) ? res.data : []));
+    } catch (e) { console.error("Fetch Withdrawals Error:", e); }
+};
+
+export const requestWithdrawal = (vendorId, amount, bankDetails) => async (dispatch) => {
+    dispatch(setActionLoading('withdrawal'));
+    try {
+        const res = await api.post(`/wallet/withdraw`, { vendorId, amount, bankDetails });
+        dispatch(fetchWithdrawals(vendorId));
+        dispatch(fetchFullProfile(vendorId)); // Refresh wallet balance
+        return { success: true, data: res.data };
+    } catch (e) {
+        console.error("Withdrawal Request Error:", e);
+        return { success: false, message: e.response?.data?.error || "Failed to request withdrawal" };
+    } finally {
+        dispatch(setActionLoading(null));
+    }
+};
 
 export const fetchCommunityPosts = () => async (dispatch) => {
     try {

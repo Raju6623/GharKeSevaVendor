@@ -226,9 +226,17 @@ function VendorPanel() {
         dispatch(fetchJobs(currentVendorId, vendorPos, true));
       });
 
+      socket.on('wallet_update', (data) => {
+        if (data.vendorId === currentVendorId) {
+          console.log("💰 Wallet Refresh Signal Received");
+          dispatch(fetchFullProfile(currentVendorId));
+        }
+      });
+
       return () => {
         socket.off('new_booking_alert');
         socket.off('job_status_update');
+        socket.off('wallet_update');
         socket.off('connect', joinRooms);
       };
     }

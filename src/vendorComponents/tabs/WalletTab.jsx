@@ -14,7 +14,8 @@ import {
     CreditCard,
     Info,
     ArrowLeft,
-    Send
+    Send,
+    Search
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchTransactions, fetchWithdrawals, requestWithdrawal } from '../../redux/thunks/vendorThunk';
@@ -36,6 +37,23 @@ const WalletTab = ({ profile, onBack }) => {
         ifscCode: profile?.ifscCode || '',
         bankName: profile?.bankName || ''
     });
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterType, setFilterType] = useState('ALL');
+
+    const filteredTransactions = transactions.filter(t => {
+        const matchesSearch = t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.bookingId?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = filterType === 'ALL' || t.type === filterType;
+        return matchesSearch && matchesType;
+    });
+
+    const typeOptions = [
+        { label: 'ALL', value: 'ALL' },
+        { label: 'EARNINGS', value: 'EARNING' },
+        { label: 'PAYOUTS', value: 'WITHDRAWAL' },
+        { label: 'BONUS', value: 'BONUS' }
+    ];
 
     useEffect(() => {
         if (profile) {
@@ -191,21 +209,43 @@ const WalletTab = ({ profile, onBack }) => {
 
             {/* Transaction History Section */}
             <section className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
-                <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500">
                             <History size={18} />
                         </div>
                         <h3 className="text-lg font-black text-slate-800 tracking-tight uppercase">Recent Transactions</h3>
                     </div>
-                    <div className="flex gap-2">
-                        <span className="text-[9px] font-black px-3 py-1 bg-slate-100 text-slate-400 rounded-full uppercase">All Time</span>
+
+                    <div className="flex flex-col sm:flex-row gap-4 flex-1 max-w-2xl">
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search transactions..."
+                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-600/10 outline-none transition-all"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100 overflow-x-auto no-scrollbar">
+                            {typeOptions.map(opt => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => setFilterType(opt.value)}
+                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all
+                                        ${filterType === opt.value ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
                 <div className="divide-y divide-slate-50">
-                    {transactions.length > 0 ? (
-                        transactions.map((item, idx) => (
+                    {filteredTransactions.length > 0 ? (
+                        filteredTransactions.map((item, idx) => (
                             <div key={item._id || idx} className="p-6 hover:bg-slate-50/50 transition-colors flex items-center justify-between group">
                                 <div className="flex items-center gap-6">
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${item.type === 'EARNING' || item.type === 'BONUS' ? 'bg-emerald-50 text-emerald-600' :

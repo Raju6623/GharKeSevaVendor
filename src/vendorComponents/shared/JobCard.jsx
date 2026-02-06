@@ -61,9 +61,14 @@ const JobCard = ({ job, onChat, onAccept, onReject, onComplete, isActionLoading 
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-xl -ml-10 -mb-10"></div>
 
                 <div className="relative z-10 flex justify-between items-start">
-                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black text-white uppercase tracking-widest border border-white/20 shadow-sm">
-                        {job.bookingStatus}
-                    </span>
+                    <div className="flex flex-col gap-2">
+                        <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black text-white uppercase tracking-widest border border-white/20 shadow-sm w-max">
+                            {job.bookingStatus}
+                        </span>
+                        <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest bg-black/10 px-2 py-1 rounded-lg w-max backdrop-blur-sm">
+                            Order ID: {job.customBookingId}
+                        </span>
+                    </div>
 
                     <div className="bg-white/20 backdrop-blur-md border border-white/20 rounded-xl p-2 text-center min-w-[60px] shadow-sm">
                         <span className="block text-[8px] text-white/80 font-black uppercase">Date</span>

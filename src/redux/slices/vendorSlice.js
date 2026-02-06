@@ -14,6 +14,9 @@ const initialState = {
     communityPosts: [],
     transactions: [],
     withdrawals: [],
+    suggestions: [],
+    chatList: [],
+    friendsList: [],
 };
 
 const vendorSlice = createSlice({
@@ -110,6 +113,15 @@ const vendorSlice = createSlice({
         },
         setWithdrawals: (state, action) => {
             state.withdrawals = action.payload;
+        },
+        setSuggestions: (state, action) => {
+            state.suggestions = action.payload;
+        },
+        setChatList: (state, action) => {
+            state.chatList = action.payload;
+        },
+        setFriendsList: (state, action) => {
+            state.friendsList = action.payload;
         }
     },
 });
@@ -132,7 +144,10 @@ export const {
     setTeamMembers,
     setCommunityPosts,
     setTransactions,
-    setWithdrawals
+    setWithdrawals,
+    setSuggestions,
+    setChatList,
+    setFriendsList
 } = vendorSlice.actions;
 
 export default vendorSlice.reducer;

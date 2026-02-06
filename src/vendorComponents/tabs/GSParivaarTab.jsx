@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageSquare, Share2, Sparkles, Award, Cake, TrendingUp, MoreHorizontal, Plus, UserCircle2, ShieldCheck, Image as ImageIcon, X, Trash2 } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Sparkles, Award, Cake, TrendingUp, MoreHorizontal, Plus, UserCircle2, ShieldCheck, Image as ImageIcon, X, Trash2, Music, Users, MapPin, Smile, BellOff, Bookmark, Pencil, Link as LinkIcon, Globe, Send } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchCommunityPosts, likePost, clapPost, createCommunityPost, deletePost } from '../../redux/thunks/vendorThunk';
+import {
+    fetchCommunityPosts, likePost, clapPost, createCommunityPost, deletePost, addPostComment,
+    fetchSuggestions, sendConnectionRequest, acceptConnectionRequest, fetchChatList, sendPrivateMessage, fetchPrivateMessages, fetchFriendsList
+} from '../../redux/thunks/vendorThunk';
 import { BASE_URL } from '../../config';
+import api from '../../api/axiosConfig';
 import Swal from 'sweetalert2';
 
 const getImageUrl = (path) => {
@@ -14,16 +18,55 @@ const getImageUrl = (path) => {
 
 const GSParivaarTab = ({ profile }) => {
     const dispatch = useDispatch();
-    const { communityPosts } = useSelector(state => state.vendor);
-    const [activeFeed, setActiveFeed] = useState('feed'); // feed, myposts
+    const { communityPosts, suggestions, chatList, friendsList } = useSelector(state => state.vendor);
+    const [activeFeed, setActiveFeed] = useState('feed'); // feed, myposts, chats
     const [isPosting, setIsPosting] = useState(false);
-    const [newPost, setNewPost] = useState({ title: '', content: '' });
+    const [selectedChat, setSelectedChat] = useState(null);
+    const [newPost, setNewPost] = useState({
+        title: '',
+        content: '',
+        location: '',
+        feeling: '',
+        music: '',
+        taggedPeople: []
+    });
+    const [activeInput, setActiveInput] = useState(null); // 'location', 'feeling', 'music'
     const [selectedImage, setSelectedImage] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
 
     useEffect(() => {
         dispatch(fetchCommunityPosts());
-    }, [dispatch]);
+        if (profile?.customUserId) {
+            dispatch(fetchSuggestions(profile.customUserId));
+            dispatch(fetchChatList(profile.customUserId));
+            dispatch(fetchFriendsList(profile.customUserId));
+
+            // Real-time polling for online status and new messages
+            const interval = setInterval(() => {
+                dispatch(fetchChatList(profile.customUserId));
+                dispatch(fetchFriendsList(profile.customUserId));
+            }, 10000); // 10s polling
+            return () => clearInterval(interval);
+        }
+    }, [dispatch, profile?.customUserId]);
+
+    // Notification for new messages
+    useEffect(() => {
+        const unreadCount = chatList.reduce((acc, chat) => acc + (chat.lastMessage?.receiverId === profile?.customUserId && !chat.lastMessage?.isRead ? 1 : 0), 0);
+        if (unreadCount > 0 && activeFeed !== 'chats') {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: 'info',
+                title: `You have ${unreadCount} new messages`
+            });
+        }
+    }, [chatList, profile?.customUserId, activeFeed]);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -46,7 +89,11 @@ const GSParivaarTab = ({ profile }) => {
             authorRole: 'Partner',
             authorImg: profile?.vendorPhoto,
             title: newPost.title,
-            content: newPost.content
+            content: newPost.content,
+            location: newPost.location,
+            feeling: newPost.feeling,
+            music: newPost.music,
+            taggedPeople: JSON.stringify(newPost.taggedPeople)
         };
 
         let result;
@@ -63,7 +110,14 @@ const GSParivaarTab = ({ profile }) => {
 
         if (result.success) {
             setIsPosting(false);
-            setNewPost({ title: '', content: '' });
+            setNewPost({
+                title: '',
+                content: '',
+                location: '',
+                feeling: '',
+                music: '',
+                taggedPeople: []
+            });
             setSelectedImage(null);
             setPreviewUrl(null);
             Swal.fire('Success', 'Your post has been shared with the community!', 'success');
@@ -149,6 +203,20 @@ const GSParivaarTab = ({ profile }) => {
                         My Posts
                         {activeFeed === 'myposts' && <motion.div layoutId="activeTab" className="absolute -bottom-2 left-0 right-0 h-1.5 bg-[#0c8182] rounded-full" />}
                     </button>
+                    <button
+                        onClick={() => setActiveFeed('chats')}
+                        className={`text-lg font-black uppercase tracking-tight transition-all relative ${activeFeed === 'chats' ? 'text-[#0c8182]' : 'text-slate-300'}`}
+                    >
+                        Chats
+                        {activeFeed === 'chats' && <motion.div layoutId="activeTab" className="absolute -bottom-2 left-0 right-0 h-1.5 bg-[#0c8182] rounded-full" />}
+                    </button>
+                    <button
+                        onClick={() => setActiveFeed('friends')}
+                        className={`text-lg font-black uppercase tracking-tight transition-all relative ${activeFeed === 'friends' ? 'text-[#0c8182]' : 'text-slate-300'}`}
+                    >
+                        Friends
+                        {activeFeed === 'friends' && <motion.div layoutId="activeTab" className="absolute -bottom-2 left-0 right-0 h-1.5 bg-[#0c8182] rounded-full" />}
+                    </button>
                 </div>
 
                 {!isPosting && (
@@ -187,39 +255,75 @@ const GSParivaarTab = ({ profile }) => {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white p-8 rounded-[3rem] border-2 border-teal-100 shadow-xl mb-8 space-y-6"
+                    className="bg-white p-6 rounded-[2.5rem] border-2 border-teal-100 shadow-xl mb-8 space-y-6"
                 >
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2.5 bg-teal-50 text-[#0c8182] rounded-xl">
-                                <Plus size={20} strokeWidth={3} />
-                            </div>
-                            <h3 className="text-lg font-black text-slate-800 italic uppercase">Write New Post</h3>
-                        </div>
-                        <button onClick={() => setIsPosting(false)} className="p-2 text-slate-300 hover:text-slate-600 transition-all">
-                            <X size={20} />
+                    {/* ... rest of the form ... */}
+                    <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                        <button onClick={() => setIsPosting(false)} className="p-2 text-slate-800 hover:bg-slate-50 rounded-full transition-all">
+                            <X size={24} />
                         </button>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight">New post</h3>
+                        <div className="flex gap-2">
+                            <MoreHorizontal size={24} className="text-slate-400" />
+                        </div>
                     </div>
 
-                    <div className="space-y-4">
-                        <input
-                            type="text"
-                            placeholder="Write Heading (e.g. My Great Day)"
-                            className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c8182]/20"
-                            value={newPost.title}
-                            onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                        />
+                    <div className="flex items-center gap-4 px-2">
+                        <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm shrink-0">
+                            {profile?.vendorPhoto ? <img src={getImageUrl(profile.vendorPhoto)} className="w-full h-full object-cover" /> : <UserCircle2 className="text-slate-300 m-auto mt-2" size={32} />}
+                        </div>
+                        <div>
+                            <h4 className="font-black text-slate-900 leading-tight">{profile?.firstName} {profile?.lastName}</h4>
+                            <div className="flex items-center gap-1 mt-0.5 px-2 py-0.5 bg-slate-100 rounded-lg text-[9px] font-black uppercase text-slate-500 tracking-tighter w-fit">
+                                <Globe size={10} /> Public
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 px-2">
+                        {[
+                            { id: 'music', icon: Music, label: 'Music', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
+                            { id: 'people', icon: Users, label: 'People', color: 'bg-blue-50 text-blue-600 border-blue-100' },
+                            { id: 'location', icon: MapPin, label: 'Location', color: 'bg-rose-50 text-rose-600 border-rose-100' },
+                            { id: 'feeling', icon: Smile, label: 'Feeling/activity', color: 'bg-amber-50 text-amber-600 border-amber-100' }
+                        ].map(action => (
+                            <button
+                                key={action.id}
+                                onClick={() => setActiveInput(activeInput === action.id ? null : action.id)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[11px] font-bold transition-all ${newPost[action.id] ? action.color : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'}`}
+                            >
+                                <action.icon size={14} />
+                                {newPost[action.id] || action.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {activeInput && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="px-2">
+                            <input
+                                autoFocus
+                                type="text"
+                                placeholder={`Add ${activeInput}...`}
+                                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#0c8182]/20"
+                                value={newPost[activeInput]}
+                                onChange={(e) => setNewPost({ ...newPost, [activeInput]: e.target.value })}
+                                onKeyPress={(e) => e.key === 'Enter' && setActiveInput(null)}
+                            />
+                        </motion.div>
+                    )}
+
+                    <div className="space-y-4 px-2">
                         <textarea
-                            placeholder="Share your experience here..."
+                            placeholder="What's on your mind?"
                             rows={4}
-                            className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#0c8182]/20 shadow-inner"
+                            className="w-full px-0 py-2 bg-white border-none text-xl font-medium text-slate-600 placeholder:text-slate-300 focus:outline-none resize-none"
                             value={newPost.content}
                             onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
                         />
                     </div>
 
                     {previewUrl && (
-                        <div className="relative rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-inner">
+                        <div className="relative rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-inner mx-2">
                             <img src={previewUrl} className="w-full h-48 object-cover" />
                             <button
                                 onClick={() => { setSelectedImage(null); setPreviewUrl(null); }}
@@ -230,7 +334,7 @@ const GSParivaarTab = ({ profile }) => {
                         </div>
                     )}
 
-                    <div className="flex items-center justify-between pt-4">
+                    <div className="flex items-center justify-between pt-4 px-2 border-t border-slate-50">
                         <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-500 rounded-xl cursor-pointer hover:bg-slate-100 transition-all font-bold text-xs uppercase tracking-tight">
                             <ImageIcon size={18} />
                             Add Photo
@@ -238,45 +342,162 @@ const GSParivaarTab = ({ profile }) => {
                         </label>
                         <div className="flex gap-3">
                             <button
-                                onClick={() => setIsPosting(false)}
-                                className="px-6 py-3 rounded-2xl font-black uppercase tracking-tight text-slate-400 hover:bg-slate-50 transition-all"
-                            >
-                                Cancel
-                            </button>
-                            <button
                                 onClick={handleCreatePost}
-                                disabled={!newPost.title || !newPost.content}
-                                className={`px-8 py-3 rounded-2xl font-black uppercase tracking-tight transition-all shadow-lg ${(!newPost.title || !newPost.content) ? 'bg-slate-100 text-slate-300' : 'bg-[#0c8182] text-white shadow-[#0c8182]/20 hover:scale-105 active:scale-95'}`}
+                                disabled={!newPost.content}
+                                className={`px-10 py-3 rounded-2xl font-black uppercase tracking-tight transition-all shadow-lg ${(!newPost.content) ? 'bg-slate-100 text-slate-300' : 'bg-[#0c8182] text-white shadow-[#0c8182]/20 hover:scale-105 active:scale-95'}`}
                             >
-                                Share Post
+                                Post
                             </button>
                         </div>
                     </div>
                 </motion.div>
             )}
 
-            {/* Posts List */}
-            <div className="space-y-12">
-                <AnimatePresence mode="popLayout">
-                    {filteredPosts.length > 0 ? (
-                        filteredPosts.map((post) => (
-                            <PostCard
-                                key={post._id}
-                                post={post}
-                                profile={profile}
-                            />
-                        ))
-                    ) : (
-                        <div className="py-20 flex flex-col items-center text-center space-y-4">
-                            <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-200">
-                                <MessageSquare size={40} />
+            {activeFeed === 'chats' ? (
+                <VendorChat
+                    profile={profile}
+                    chatList={chatList}
+                    selectedChat={selectedChat}
+                    setSelectedChat={setSelectedChat}
+                />
+            ) : activeFeed === 'friends' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {friendsList.length > 0 ? friendsList.map(friend => (
+                        <div key={friend.customUserId} className="bg-white rounded-[2.5rem] border border-slate-100 p-6 shadow-sm hover:shadow-xl transition-all duration-300 group">
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="relative">
+                                    <div className="w-16 h-16 rounded-[1.5rem] bg-slate-50 overflow-hidden border-2 border-white shadow-md">
+                                        {friend.vendorPhoto ? <img src={getImageUrl(friend.vendorPhoto)} className="w-full h-full object-cover" /> : <UserCircle2 className="m-auto mt-2 text-slate-300" size={32} />}
+                                    </div>
+                                    {friend.isOnline && (
+                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-white rounded-full"></div>
+                                    )}
+                                </div>
+                                <div>
+                                    <h4 className="font-black text-slate-900 text-sm tracking-tight uppercase truncate">{friend.firstName} {friend.lastName}</h4>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">{friend.isOnline ? 'Active Now' : 'Offline'}</p>
+                                </div>
                             </div>
-                            <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">No posts found</h3>
-                            <p className="text-sm font-bold text-slate-400">Share something to join the GharKeSeva community.</p>
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 p-3 rounded-2xl">
+                                    <Globe size={14} className="text-[#0c8182]" />
+                                    {friend.vendorCity} • {friend.vendorCategory}
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setSelectedChat(friend);
+                                        setActiveFeed('chats');
+                                    }}
+                                    className="w-full py-3 bg-[#0c8182] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-900/10 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <MessageSquare size={14} />
+                                    Send Message
+                                </button>
+                            </div>
+                        </div>
+                    )) : (
+                        <div className="col-span-full py-20 flex flex-col items-center text-center space-y-4 bg-slate-50/50 rounded-[3rem]">
+                            <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center text-slate-200">
+                                <Users size={40} />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">No friends yet</h3>
+                            <p className="text-sm font-bold text-slate-400">Start connecting with other vendors from the feed.</p>
                         </div>
                     )}
-                </AnimatePresence>
-            </div>
+                </div>
+            ) : (
+                <>
+                    {/* Pending Requests Banner */}
+                    {profile?.pendingRequests?.length > 0 && (
+                        <div className="mb-8 p-6 bg-amber-50 rounded-[2.5rem] border border-amber-100 flex items-center justify-between shadow-sm mx-2">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl">
+                                    <Users size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="font-black text-slate-900 text-sm tracking-tight uppercase">Friend Requests</h4>
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter">{profile.pendingRequests.length} vendors want to connect with you</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setActiveFeed('chats')}
+                                className="px-5 py-2.5 bg-white text-amber-600 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-amber-100 hover:bg-amber-100 transition-all shadow-sm"
+                            >
+                                View All
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Suggestions Section */}
+                    {suggestions.length > 0 && activeFeed === 'feed' && (
+                        <div className="mb-12">
+                            <div className="flex items-center justify-between mb-6 px-2">
+                                <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase italic flex items-center gap-2">
+                                    <Users size={20} className="text-[#0c8182]" />
+                                    People you may know
+                                </h3>
+                                <button className="text-xs font-bold text-slate-400 hover:text-[#0c8182] uppercase tracking-widest transition-all">See all</button>
+                            </div>
+                            <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 scrollbar-hide">
+                                {suggestions.map((vendor) => (
+                                    <div key={vendor.customUserId} className="min-w-[200px] bg-white rounded-[2.5rem] border border-slate-100 p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                                        <div className="relative mb-4">
+                                            <div className="w-20 h-20 mx-auto rounded-3xl bg-slate-50 overflow-hidden border-4 border-white shadow-md">
+                                                {vendor.vendorPhoto ? (
+                                                    <img src={getImageUrl(vendor.vendorPhoto)} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-teal-50 text-[#0c8182] font-black text-2xl">
+                                                        {vendor.firstName[0]}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full"></div>
+                                        </div>
+                                        <div className="text-center mb-5">
+                                            <h4 className="font-black text-slate-900 text-sm tracking-tight truncate">{vendor.firstName} {vendor.lastName}</h4>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">{vendor.vendorCategory} • {vendor.vendorCity}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <button
+                                                onClick={() => dispatch(sendConnectionRequest(profile.customUserId, vendor.customUserId))}
+                                                className="w-full py-2.5 bg-[#0c8182] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-900/10 hover:scale-[1.02] active:scale-95 transition-all"
+                                            >
+                                                Add Friend
+                                            </button>
+                                            <button className="w-full py-2.5 bg-slate-50 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">
+                                                Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Posts List */}
+                    <div className="space-y-12">
+                        <AnimatePresence mode="popLayout">
+                            {filteredPosts.length > 0 ? (
+                                filteredPosts.map((post) => (
+                                    <PostCard
+                                        key={post._id}
+                                        post={post}
+                                        profile={profile}
+                                    />
+                                ))
+                            ) : (
+                                <div className="py-20 flex flex-col items-center text-center space-y-4">
+                                    <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-200">
+                                        <MessageSquare size={40} />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">No posts found</h3>
+                                    <p className="text-sm font-bold text-slate-400">Share something to join the GharKeSeva community.</p>
+                                </div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
@@ -290,6 +511,10 @@ const PostCard = ({ post, profile }) => {
     // The previous error suggests post.likes is NOT an array (it's a number from my schema update).
     // So .includes() failed. We need to check post.likedBy
     const [isLiked, setIsLiked] = useState(post.likedBy?.includes(profile?.customUserId));
+    const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+    const [commentText, setCommentText] = useState('');
+    const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const handleLike = () => {
         if (!profile?.customUserId) return;
@@ -303,7 +528,38 @@ const PostCard = ({ post, profile }) => {
         setClaps(claps + 1);
     };
 
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(`${window.location.origin}/post/${post._id}`);
+        Swal.fire({
+            title: 'Copied!',
+            text: 'Link to this post has been copied to clipboard.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        });
+        setIsMenuOpen(false);
+    };
+
+    const handleCommentSubmit = async (e) => {
+        e.preventDefault();
+        if (!commentText.trim() || !profile) return;
+
+        setIsSubmittingComment(true);
+        const result = await dispatch(addPostComment(post._id, {
+            authorName: `${profile.firstName} ${profile.lastName}`,
+            authorId: profile.customUserId,
+            authorRole: 'Partner',
+            content: commentText.trim()
+        }));
+
+        if (result.success) {
+            setCommentText('');
+        }
+        setIsSubmittingComment(false);
+    };
+
     const handleDelete = async () => {
+        setIsMenuOpen(false);
         const result = await Swal.fire({
             title: 'Are you sure?',
             text: "This post will be deleted permanently!",
@@ -343,7 +599,7 @@ const PostCard = ({ post, profile }) => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden"
+            className="bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden relative"
         >
             {/* Post Header */}
             <div className="p-8 flex items-center justify-between">
@@ -352,66 +608,115 @@ const PostCard = ({ post, profile }) => {
                         {post.authorImg ? <img src={getImageUrl(post.authorImg)} className="w-full h-full object-cover" /> : (post.isOfficial ? 'GS' : <UserCircle2 size={18} />)}
                     </div>
                     <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="text-sm font-black text-slate-900 tracking-tight">{post.authorName}</h4>
                             {post.isOfficial && <ShieldCheck size={14} className="text-blue-500" fill="currentColor" />}
+                            {post.taggedPeople && post.taggedPeople.length > 0 && (
+                                <span className="text-[11px] font-bold text-slate-400">
+                                    with <span className="text-slate-900">{post.taggedPeople[0]}</span>
+                                    {post.taggedPeople.length > 1 && ` and ${post.taggedPeople.length - 1} others`}
+                                </span>
+                            )}
+                            {post.feeling && <span className="text-[11px] font-bold text-slate-400 italic">is feeling {post.feeling}</span>}
+                            {post.location && <span className="flex items-center gap-1 text-[11px] font-black text-[#0c8182] uppercase tracking-tighter"><MapPin size={10} /> {post.location}</span>}
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{timeAgo(post.createdAt)}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{timeAgo(post.createdAt)}</p>
+                            {post.music && <span className="flex items-center gap-1 text-[9px] font-black text-emerald-500 uppercase"><Music size={10} /> {post.music}</span>}
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    {isOwnPost && (
-                        <button
-                            onClick={handleDelete}
-                            className="p-2.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-90"
-                            title="Post Hatayein"
-                        >
-                            <Trash2 size={18} strokeWidth={2.5} />
-                        </button>
-                    )}
-                    <button className="text-slate-300 hover:text-slate-600 p-2.5">
+                <div className="flex items-center gap-2 relative">
+                    <button
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        className={`text-slate-300 hover:text-slate-600 p-2.5 rounded-xl transition-all ${isMenuOpen ? 'bg-slate-50 text-slate-900' : ''}`}
+                    >
                         <MoreHorizontal size={20} />
                     </button>
+
+                    <AnimatePresence>
+                        {isMenuOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                className="absolute right-0 top-12 w-64 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-3xl z-50 py-3 overflow-hidden"
+                            >
+                                <button className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
+                                    <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900 rounded-xl transition-all">
+                                        <BellOff size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black text-slate-900 tracking-tight">Turn off notifications</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">For this post</p>
+                                    </div>
+                                </button>
+
+                                <button className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
+                                    <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900 rounded-xl transition-all">
+                                        <Bookmark size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black text-slate-900 tracking-tight">Save post</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Add to your saved items</p>
+                                    </div>
+                                </button>
+
+                                {isOwnPost && (
+                                    <>
+                                        <button className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
+                                            <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900 rounded-xl transition-all">
+                                                <Pencil size={18} />
+                                            </div>
+                                            <p className="text-xs font-black text-slate-900 tracking-tight">Edit post</p>
+                                        </button>
+                                        <button className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
+                                            <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900 rounded-xl transition-all">
+                                                <Users size={18} />
+                                            </div>
+                                            <p className="text-xs font-black text-slate-900 tracking-tight">Edit Privacy</p>
+                                        </button>
+                                        <button
+                                            onClick={handleDelete}
+                                            className="w-full px-5 py-3 flex items-center gap-4 hover:bg-rose-50 transition-all group text-left border-t border-slate-50 mt-1"
+                                        >
+                                            <div className="p-2.5 bg-rose-50 text-rose-500 rounded-xl">
+                                                <Trash2 size={18} />
+                                            </div>
+                                            <p className="text-xs font-black text-rose-500 tracking-tight uppercase">Delete Post</p>
+                                        </button>
+                                    </>
+                                )}
+
+                                <button
+                                    onClick={handleCopyLink}
+                                    className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left border-t border-slate-50 mt-1"
+                                >
+                                    <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-[#0c8182] rounded-xl transition-all">
+                                        <LinkIcon size={18} />
+                                    </div>
+                                    <p className="text-xs font-black text-slate-900 tracking-tight">Copy link</p>
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
             {/* Post Content */}
             <div className={`px-8 pb-4 space-y-6`}>
                 <div className="space-y-3">
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight italic uppercase">{post.title}</h3>
+                    {post.title && <h3 className="text-xl font-black text-slate-900 tracking-tight italic uppercase">{post.title}</h3>}
                     <p className="text-sm font-bold text-slate-500 leading-relaxed italic whitespace-pre-line">{post.content}</p>
                 </div>
 
                 {post.image && (
                     <div className="rounded-[2rem] overflow-hidden border-2 border-slate-50 shadow-inner">
-                        <img src={getImageUrl(post.image)} className="w-full h-auto object-cover max-h-[400px]" alt="Post" />
+                        <img src={getImageUrl(post.image)} className="w-full h-auto object-cover max-h-[500px]" alt="Post" />
                     </div>
                 )}
 
-                {post.users && post.users.length > 0 && (
-                    <div className={`p-8 rounded-[2.5rem] bg-gradient-to-br ${post.gradient || 'from-slate-50 to-slate-100'} border-2 border-white shadow-sm`}>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                            {post.users.map((u, i) => (
-                                <div key={i} className="flex flex-col items-center text-center space-y-3">
-                                    <div className="w-20 h-20 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
-                                        {u.img ? <img src={getImageUrl(u.img)} className="w-full h-full object-cover" /> : <UserCircle2 size={40} className="text-slate-200 m-auto mt-4" />}
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black text-slate-900 leading-tight">{u.name}</p>
-                                        {u.detail && <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{u.detail}</p>}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="mt-8 flex justify-center">
-                            <div className="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#0c8182] border border-white">
-                                {post.type === 'celebration' && <Cake size={12} />}
-                                {post.type === 'achievement' && <Award size={12} />}
-                                {post.category || 'Special Event'}
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* Render any music/feeling/location tags here if needed in content body */}
             </div>
 
             {/* Interaction Bar */}
@@ -424,8 +729,11 @@ const PostCard = ({ post, profile }) => {
                         <Heart size={20} fill={isLiked ? "currentColor" : "none"} strokeWidth={isLiked ? 0 : 2.5} />
                         <span>{likes}</span>
                     </button>
-                    <button className="flex items-center gap-2 text-xs font-black text-slate-400 hover:text-blue-500 transition-all">
-                        <MessageSquare size={20} strokeWidth={2.5} />
+                    <button
+                        onClick={() => setIsCommentsOpen(!isCommentsOpen)}
+                        className={`flex items-center gap-2 text-xs font-black transition-all ${isCommentsOpen ? 'text-blue-500 scale-110' : 'text-slate-400 hover:text-blue-500'}`}
+                    >
+                        <MessageSquare size={20} fill={isCommentsOpen ? "currentColor" : "none"} strokeWidth={isCommentsOpen ? 0 : 2.5} />
                         <span>{post.comments?.length || 0}</span>
                     </button>
                     <button
@@ -440,6 +748,68 @@ const PostCard = ({ post, profile }) => {
                     <Share2 size={18} />
                 </button>
             </div>
+
+            {/* Comments Section */}
+            <AnimatePresence>
+                {isCommentsOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-white border-t border-slate-50 overflow-hidden"
+                    >
+                        <div className="p-8 space-y-6">
+                            {/* Comment Input */}
+                            <form onSubmit={handleCommentSubmit} className="flex gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-teal-50 shrink-0 overflow-hidden border-2 border-white shadow-sm">
+                                    {profile?.vendorPhoto ? <img src={getImageUrl(profile.vendorPhoto)} className="w-full h-full object-cover" /> : <UserCircle2 className="text-slate-300 m-auto mt-2" size={24} />}
+                                </div>
+                                <div className="flex-1 relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Add a comment..."
+                                        className="w-full pl-6 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
+                                        disabled={isSubmittingComment}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!commentText.trim() || isSubmittingComment}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-blue-500 disabled:text-slate-300 transition-all"
+                                    >
+                                        <Send size={18} />
+                                    </button>
+                                </div>
+                            </form>
+
+                            {/* Comments List */}
+                            <div className="space-y-6">
+                                {post.comments && post.comments.length > 0 ? (
+                                    post.comments.map((comment, idx) => (
+                                        <div key={idx} className="flex gap-4 group">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-50 shrink-0 flex items-center justify-center text-slate-400 font-bold border border-slate-100">
+                                                {comment.authorName?.[0]}
+                                            </div>
+                                            <div className="flex-1 bg-slate-50/50 p-4 rounded-3xl group-hover:bg-slate-50 transition-colors">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <h5 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{comment.authorName}</h5>
+                                                    <span className="text-[9px] font-bold text-slate-400">{timeAgo(comment.createdAt)}</span>
+                                                </div>
+                                                <p className="text-xs font-semibold text-slate-600 italic">{comment.content}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-8 text-center bg-slate-50/30 rounded-[2rem] border border-dashed border-slate-100">
+                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Pehle comment karein!</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };
@@ -450,5 +820,192 @@ const ClapIcon = ({ size }) => (
         <path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
     </svg>
 );
+
+const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat }) => {
+    const dispatch = useDispatch();
+    const [messages, setMessages] = useState([]);
+    const [msgText, setMsgText] = useState('');
+    const [pendingProfiles, setPendingProfiles] = useState([]);
+
+    useEffect(() => {
+        if (profile?.pendingRequests?.length > 0) {
+            const loadPending = async () => {
+                const profiles = [];
+                for (let pid of profile.pendingRequests) {
+                    const res = await api.get(`/vendor/profile/${pid}`);
+                    if (res.data) profiles.push(res.data);
+                }
+                setPendingProfiles(profiles);
+            };
+            loadPending();
+        }
+    }, [profile?.pendingRequests]);
+
+    useEffect(() => {
+        let interval;
+        if (selectedChat) {
+            const loadMsgs = async () => {
+                const data = await dispatch(fetchPrivateMessages(profile.customUserId, selectedChat.customUserId));
+                setMessages(data);
+            };
+            loadMsgs();
+            interval = setInterval(loadMsgs, 3000); // Polling for "real-time"
+        }
+        return () => clearInterval(interval);
+    }, [selectedChat, profile.customUserId, dispatch]);
+
+    const handleSend = async (e) => {
+        e.preventDefault();
+        if (!msgText.trim() || !selectedChat) return;
+
+        const msgData = {
+            senderId: profile.customUserId,
+            receiverId: selectedChat.customUserId,
+            content: msgText.trim()
+        };
+
+        const res = await dispatch(sendPrivateMessage(msgData));
+        if (res.success) {
+            setMsgText('');
+            const data = await dispatch(fetchPrivateMessages(profile.customUserId, selectedChat.customUserId));
+            setMessages(data);
+        }
+    };
+
+    return (
+        <div className="flex bg-white rounded-[3rem] border border-slate-100 h-[600px] overflow-hidden shadow-2xl">
+            {/* Sidebar */}
+            <div className={`w-full lg:w-1/3 border-r border-slate-50 flex flex-col ${selectedChat ? 'hidden lg:flex' : 'flex'}`}>
+                <div className="p-6 border-b border-slate-50">
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase italic flex items-center gap-2">
+                        <MessageSquare size={18} className="text-[#0c8182]" />
+                        Messages
+                    </h3>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    {pendingProfiles.length > 0 && (
+                        <div className="mb-6 space-y-2">
+                            <h4 className="px-4 text-[10px] font-black text-amber-500 uppercase tracking-widest mb-2">Pending Requests</h4>
+                            {pendingProfiles.map(p => (
+                                <div key={p.customUserId} className="p-4 bg-amber-50 rounded-[2rem] border border-amber-100">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-xl bg-white overflow-hidden shrink-0 shadow-sm">
+                                            {p.vendorPhoto ? <img src={getImageUrl(p.vendorPhoto)} className="w-full h-full object-cover" /> : <UserCircle2 className="m-auto mt-1.5 text-slate-300" size={24} />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h5 className="font-black text-[10px] uppercase tracking-tight truncate">{p.firstName} {p.lastName}</h5>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase truncate">{p.vendorCategory}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => dispatch(acceptConnectionRequest(profile.customUserId, p.customUserId))}
+                                            className="flex-1 py-2 bg-[#0c8182] text-white rounded-xl text-[9px] font-black uppercase tracking-tighter"
+                                        >
+                                            Accept
+                                        </button>
+                                        <button className="flex-1 py-2 bg-white text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-tighter border border-slate-100">
+                                            Ignore
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <h4 className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-4">Active Chats</h4>
+                    {chatList.length > 0 ? chatList.map(chat => (
+                        <button
+                            key={chat.customUserId}
+                            onClick={() => setSelectedChat(chat)}
+                            className={`w-full flex items-center gap-4 p-4 rounded-[2rem] transition-all ${selectedChat?.customUserId === chat.customUserId ? 'bg-teal-50 text-[#0c8182]' : 'hover:bg-slate-50 text-slate-600'}`}
+                        >
+                            <div className="w-12 h-12 rounded-2xl bg-slate-100 overflow-hidden shrink-0 border-2 border-white shadow-sm relative">
+                                {chat.vendorPhoto ? <img src={getImageUrl(chat.vendorPhoto)} className="w-full h-full object-cover" /> : <UserCircle2 className="m-auto mt-2 text-slate-300" size={28} />}
+                                {chat.isOnline && (
+                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+                                )}
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                                <h4 className="font-black text-xs uppercase tracking-tight truncate">{chat.firstName} {chat.lastName}</h4>
+                                <p className="text-[10px] font-bold text-slate-400 truncate uppercase mt-0.5 italic">{chat.lastMessage?.content || 'Say hello!'}</p>
+                            </div>
+                        </button>
+                    )) : (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-slate-50/50 rounded-[2rem]">
+                            <Users size={32} className="text-slate-200 mb-2" />
+                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Connect with vendors to chat</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Chat Window */}
+            {selectedChat ? (
+                <div className="flex-1 flex flex-col bg-slate-50/30">
+                    {/* Chat Header */}
+                    <div className="p-6 bg-white border-b border-slate-50 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setSelectedChat(null)} className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-slate-600">
+                                <X size={20} />
+                            </button>
+                            <div className="w-10 h-10 rounded-xl bg-teal-50 overflow-hidden shadow-sm">
+                                {selectedChat.vendorPhoto ? <img src={getImageUrl(selectedChat.vendorPhoto)} className="w-full h-full object-cover" /> : <UserCircle2 className="m-auto mt-1.5 text-slate-300" size={24} />}
+                            </div>
+                            <div>
+                                <h4 className="font-black text-slate-900 text-xs uppercase tracking-tight">{selectedChat.firstName} {selectedChat.lastName}</h4>
+                                <p className={`text-[10px] font-bold uppercase tracking-tighter ${selectedChat.isOnline ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                    {selectedChat.isOnline ? 'Active now' : 'Offline'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chat Messages */}
+                    <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                        {messages.map((m, idx) => (
+                            <div key={idx} className={`flex ${m.senderId === profile.customUserId ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[75%] p-4 rounded-3xl text-sm font-semibold shadow-sm ${m.senderId === profile.customUserId ? 'bg-[#0c8182] text-white rounded-br-none shadow-[#0c8182]/20' : 'bg-white text-slate-600 rounded-bl-none border border-slate-100'}`}>
+                                    {m.content}
+                                    <p className={`text-[8px] mt-1 uppercase font-black tracking-tight ${m.senderId === profile.customUserId ? 'text-teal-50/50' : 'text-slate-300'}`}>
+                                        {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Msg Input */}
+                    <div className="p-6 bg-white">
+                        <form onSubmit={handleSend} className="relative">
+                            <input
+                                type="text"
+                                placeholder="Type a message..."
+                                className="w-full pl-6 pr-16 py-4 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-bold focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                                value={msgText}
+                                onChange={(e) => setMsgText(e.target.value)}
+                            />
+                            <button
+                                type="submit"
+                                disabled={!msgText.trim()}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-3 bg-[#0c8182] text-white rounded-[1.5rem] shadow-lg shadow-teal-900/20 hover:scale-105 active:scale-95 disabled:bg-slate-200 disabled:shadow-none transition-all"
+                            >
+                                <Send size={18} strokeWidth={3} />
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            ) : (
+                <div className="hidden lg:flex flex-1 flex-col items-center justify-center p-12 text-center bg-slate-50/20">
+                    <div className="w-24 h-24 bg-teal-50 rounded-[3rem] flex items-center justify-center text-[#0c8182] mb-6 shadow-inner">
+                        <Sparkles size={40} />
+                    </div>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic mb-2">Connect & Grow Together</h3>
+                    <p className="text-sm font-bold text-slate-400 max-w-sm">Select a vendor from the list or add new friends from the feed to start chatting.</p>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default GSParivaarTab;

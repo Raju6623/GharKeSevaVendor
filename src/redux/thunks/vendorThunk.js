@@ -11,7 +11,10 @@ import {
     updateProfile,
     setCommunityPosts,
     setTransactions,
-    setWithdrawals
+    setWithdrawals,
+    setSuggestions,
+    setChatList,
+    setFriendsList
 } from '../slices/vendorSlice';
 
 export const fetchTransactions = (vendorId) => async (dispatch) => {
@@ -88,6 +91,17 @@ export const clapPost = (postId) => async (dispatch) => {
     try {
         await api.post(`/community/posts/clap/${postId}`);
     } catch (e) { console.error("Clap Error:", e); }
+};
+
+export const addPostComment = (postId, commentData) => async (dispatch) => {
+    try {
+        await api.post(`/community/posts/comment/${postId}`, commentData);
+        dispatch(fetchCommunityPosts());
+        return { success: true };
+    } catch (e) {
+        console.error("Comment Error:", e);
+        return { success: false };
+    }
 };
 
 export const deletePost = (postId, authorId) => async (dispatch) => {
@@ -217,4 +231,57 @@ export const fetchIncentives = (vendorId) => async (dispatch) => {
         console.error("Incentive fetch failed", error);
         dispatch(setIncentives([]));
     }
+};
+
+// Social Thunks
+export const fetchSuggestions = (vendorId) => async (dispatch) => {
+    try {
+        const res = await api.get(`/social/suggestions/${vendorId}`);
+        dispatch(setSuggestions(Array.isArray(res.data) ? res.data : []));
+    } catch (e) { console.error("Fetch Suggestions Error:", e); }
+};
+
+export const sendConnectionRequest = (senderId, receiverId) => async (dispatch) => {
+    try {
+        await api.post(`/social/connect`, { senderId, receiverId });
+        dispatch(fetchSuggestions(senderId));
+        return { success: true };
+    } catch (e) { return { success: false }; }
+};
+
+export const acceptConnectionRequest = (vendorId, requesterId) => async (dispatch) => {
+    try {
+        await api.post(`/social/accept/${vendorId}`, { requesterId });
+        dispatch(fetchFullProfile(vendorId));
+        return { success: true };
+    } catch (e) { return { success: false }; }
+};
+
+export const fetchChatList = (vendorId) => async (dispatch) => {
+    try {
+        const res = await api.get(`/social/chats/${vendorId}`);
+        dispatch(setChatList(Array.isArray(res.data) ? res.data : []));
+    } catch (e) { console.error("Fetch Chats Error:", e); }
+};
+
+export const fetchFriendsList = (vendorId) => async (dispatch) => {
+    try {
+        const res = await api.get(`/social/friends/${vendorId}`);
+        dispatch(setFriendsList(Array.isArray(res.data) ? res.data : []));
+    } catch (e) { console.error("Fetch Friends Error:", e); }
+};
+
+export const fetchPrivateMessages = (u1, u2) => async () => {
+    try {
+        const res = await api.get(`/social/messages/${u1}/${u2}`);
+        return Array.isArray(res.data) ? res.data : [];
+    } catch (e) { return []; }
+};
+
+export const sendPrivateMessage = (msgData) => async (dispatch) => {
+    try {
+        await api.post(`/social/message`, msgData);
+        dispatch(fetchChatList(msgData.senderId));
+        return { success: true };
+    } catch (e) { return { success: false }; }
 };

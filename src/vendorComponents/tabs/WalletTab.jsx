@@ -13,7 +13,8 @@ import {
     Building2,
     CreditCard,
     Info,
-    ArrowLeft
+    ArrowLeft,
+    Send
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchTransactions, fetchWithdrawals, requestWithdrawal } from '../../redux/thunks/vendorThunk';
@@ -24,6 +25,29 @@ const WalletTab = ({ profile, onBack }) => {
     const { transactions, withdrawals, isActionLoading, language } = useSelector(state => state.vendor);
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [amount, setAmount] = useState('');
+    const [withdrawalMethod, setWithdrawalMethod] = useState('BANK');
+    const [upiId, setUpiId] = useState(profile?.upiId || '');
+
+    // Editable Bank Details
+    const [isEditingBank, setIsEditingBank] = useState(false);
+    const [bankDetails, setBankDetails] = useState({
+        accountHolder: profile?.accountHolderName || `${profile?.firstName} ${profile?.lastName}`,
+        accountNumber: profile?.accountNumber || '',
+        ifscCode: profile?.ifscCode || '',
+        bankName: profile?.bankName || ''
+    });
+
+    useEffect(() => {
+        if (profile) {
+            setBankDetails({
+                accountHolder: profile?.accountHolderName || `${profile?.firstName} ${profile?.lastName}`,
+                accountNumber: profile?.accountNumber || '',
+                ifscCode: profile?.ifscCode || '',
+                bankName: profile?.bankName || ''
+            });
+            setUpiId(profile?.upiId || '');
+        }
+    }, [profile]);
 
     useEffect(() => {
         if (profile?.customUserId) {
@@ -41,35 +65,34 @@ const WalletTab = ({ profile, onBack }) => {
         }
 
         if (withdrawalAmount > profile?.walletBalance) {
-            return Swal.fire('Error', 'Insufficient balance', 'error');
+            return Swal.fire('Error', 'Insufficient wallet balance', 'error');
         }
 
-        const bankDetails = {
-            accountHolder: profile?.accountHolderName || `${profile?.firstName} ${profile?.lastName}`,
-            accountNumber: profile?.accountNumber,
-            ifscCode: profile?.ifscCode,
-            bankName: profile?.bankName
+        const details = {
+            vendorId: profile.customUserId,
+            amount: withdrawalAmount,
+            withdrawalMethod
         };
 
-        if (!bankDetails.accountNumber || !bankDetails.ifscCode) {
-            return Swal.fire({
-                title: 'Bank Details Missing',
-                text: 'Please update your bank details in the Financial Details section first.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Go to Financial Details'
-            }).then((result) => {
-                if (result.isConfirmed) onBack(); // Go back to profile handles this or specific tab
-            });
+        if (withdrawalMethod === 'BANK') {
+            if (!bankDetails.accountNumber || !bankDetails.ifscCode || !bankDetails.bankName) {
+                return Swal.fire('Error', 'Please fill all bank details', 'error');
+            }
+            details.bankDetails = bankDetails;
+        } else { // UPI
+            if (!upiId || !upiId.includes('@')) {
+                return Swal.fire('Error', 'Please enter a valid UPI ID', 'error');
+            }
+            details.upiId = upiId;
         }
 
-        const result = await dispatch(requestWithdrawal(profile.customUserId, withdrawalAmount, bankDetails));
+        const result = await dispatch(requestWithdrawal(profile.customUserId, withdrawalAmount, details));
         if (result.success) {
             Swal.fire('Success', 'Withdrawal request submitted successfully!', 'success');
             setIsWithdrawModalOpen(false);
             setAmount('');
         } else {
-            Swal.fire('Error', result.message, 'error');
+            Swal.fire('Error', result.message || 'Submission failed', 'error');
         }
     };
 
@@ -186,7 +209,7 @@ const WalletTab = ({ profile, onBack }) => {
                             <div key={item._id || idx} className="p-6 hover:bg-slate-50/50 transition-colors flex items-center justify-between group">
                                 <div className="flex items-center gap-6">
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${item.type === 'EARNING' || item.type === 'BONUS' ? 'bg-emerald-50 text-emerald-600' :
-                                            item.type === 'WITHDRAWAL' ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'
+                                        item.type === 'WITHDRAWAL' ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'
                                         }`}>
                                         {item.type === 'EARNING' || item.type === 'BONUS' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                                     </div>
@@ -204,7 +227,7 @@ const WalletTab = ({ profile, onBack }) => {
                                 </div>
                                 <div className="text-right">
                                     <p className={`text-lg font-black tracking-tighter ${item.type === 'EARNING' || item.type === 'BONUS' ? 'text-emerald-600' :
-                                            item.type === 'WITHDRAWAL' ? 'text-indigo-600' : 'text-rose-600'
+                                        item.type === 'WITHDRAWAL' ? 'text-indigo-600' : 'text-rose-600'
                                         }`}>
                                         {item.type === 'EARNING' || item.type === 'BONUS' ? '+' : '-'}₹{item.amount}
                                     </p>
@@ -234,7 +257,7 @@ const WalletTab = ({ profile, onBack }) => {
                                 <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
                                     <div className="flex items-center gap-4">
                                         <div className={`p-2 rounded-xl ${w.status === 'PAID' ? 'bg-emerald-50 text-emerald-600' :
-                                                w.status === 'REJECTED' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+                                            w.status === 'REJECTED' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
                                             }`}>
                                             {w.status === 'PAID' ? <CheckCircle2 size={16} /> : w.status === 'REJECTED' ? <AlertCircle size={16} /> : <Clock size={16} />}
                                         </div>
@@ -244,7 +267,7 @@ const WalletTab = ({ profile, onBack }) => {
                                         </div>
                                     </div>
                                     <div className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${w.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' :
-                                            w.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                                        w.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
                                         }`}>
                                         {w.status}
                                     </div>
@@ -290,20 +313,115 @@ const WalletTab = ({ profile, onBack }) => {
                                         />
                                     </div>
                                     <p className="text-[10px] text-slate-400 mt-4 leading-relaxed font-bold italic">
-                                        Money will be sent to your primary bank account ending in <span className="text-slate-800">*{String(profile?.accountNumber).slice(-4)}</span>.
+                                        Choose your preferred payout method.
                                     </p>
                                 </div>
 
+                                <div className="grid grid-cols-2 gap-3 mb-8">
+                                    <button
+                                        type="button"
+                                        onClick={() => setWithdrawalMethod('BANK')}
+                                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${withdrawalMethod === 'BANK' ? 'bg-indigo-50 border-indigo-600 text-indigo-700' : 'bg-white border-slate-100 text-slate-400'}`}
+                                    >
+                                        <Building2 size={24} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Bank Transfer</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setWithdrawalMethod('UPI')}
+                                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${withdrawalMethod === 'UPI' ? 'bg-indigo-50 border-indigo-600 text-indigo-700' : 'bg-white border-slate-100 text-slate-400'}`}
+                                    >
+                                        <Send size={24} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">UPI ID</span>
+                                    </button>
+                                </div>
+
                                 <div className="space-y-4 mb-4">
-                                    <div className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100">
-                                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
-                                            <Building2 size={20} />
+                                    {withdrawalMethod === 'BANK' ? (
+                                        !isEditingBank ? (
+                                            <div className="group relative">
+                                                <div className="flex items-center gap-4 p-5 rounded-2xl border border-slate-100 bg-slate-50/50">
+                                                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                                                        <Building2 size={24} />
+                                                    </div>
+                                                    <div className="min-w-0 pr-12">
+                                                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1.5">Primary Bank Account</p>
+                                                        <p className="text-sm font-black text-slate-700 truncate">{bankDetails.accountNumber ? `*${String(bankDetails.accountNumber).slice(-4)}` : 'Bank Not Linked'}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">{bankDetails.bankName || 'Details missing'}</p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsEditingBank(true)}
+                                                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 bg-white shadow-sm border border-slate-100 rounded-xl text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all"
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4 p-5 bg-slate-50 border border-slate-100 rounded-2xl animate-in slide-in-from-top-2 duration-300">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Modify Bank Details</h4>
+                                                    <button type="button" onClick={() => setIsEditingBank(false)} className="text-[10px] font-black text-indigo-600 uppercase">Back to Default</button>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="col-span-2">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Account Holder Name"
+                                                            className="w-full px-4 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-700 focus:border-indigo-600 outline-none"
+                                                            value={bankDetails.accountHolder}
+                                                            onChange={(e) => setBankDetails({ ...bankDetails, accountHolder: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Account Number"
+                                                            className="w-full px-4 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-700 focus:border-indigo-600 outline-none"
+                                                            value={bankDetails.accountNumber}
+                                                            onChange={(e) => setBankDetails({ ...bankDetails, accountNumber: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="IFSC Code"
+                                                            className="w-full px-4 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-700 focus:border-indigo-600 outline-none uppercase"
+                                                            value={bankDetails.ifscCode}
+                                                            onChange={(e) => setBankDetails({ ...bankDetails, ifscCode: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Bank Name"
+                                                            className="w-full px-4 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-700 focus:border-indigo-600 outline-none"
+                                                            value={bankDetails.bankName}
+                                                            onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none block mb-1">Enter UPI ID</label>
+                                            <div className="relative">
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                                    <Send size={16} />
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={upiId}
+                                                    onChange={(e) => setUpiId(e.target.value)}
+                                                    placeholder="example@okaxis"
+                                                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm text-slate-700 focus:border-indigo-600 focus:outline-none transition-all shadow-inner"
+                                                />
+                                            </div>
+                                            {profile?.upiId && <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1"><History size={10} /> Saved: {profile.upiId}</p>}
                                         </div>
-                                        <div className="min-w-0">
-                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Bank Name</p>
-                                            <p className="text-sm font-black text-slate-700 truncate">{profile?.bankName || 'Not Set'}</p>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
 
                                 <button

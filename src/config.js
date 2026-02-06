@@ -4,6 +4,15 @@ export const API_URL = `${BASE_URL}/api/auth`;
 
 export const getImageUrl = (path) => {
     if (!path) return "https://via.placeholder.com/150";
-    if (path.startsWith('http') || path.startsWith('data:')) return path;
-    return `${BASE_URL}/${path}`;
+    if (typeof path === 'string' && (path.startsWith('http') || path.startsWith('data:'))) {
+        return path;
+    }
+
+    let cleanPath = path.toString().replace(/\\/g, '/');
+    if (cleanPath.includes('uploads/')) {
+        cleanPath = 'uploads/' + cleanPath.split('uploads/').pop();
+    }
+    if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+
+    return `${BASE_URL}/${cleanPath}`;
 };

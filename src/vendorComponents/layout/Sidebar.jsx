@@ -10,7 +10,7 @@ const getImageUrl = (path) => {
 
 const Sidebar = ({ profile, navItems, footerItems = [], activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen, jobs = [] }) => {
     return (
-        <aside className={`fixed inset-y-0 left-0 z-[60] w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 lg:translate-x-0 lg:static ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <aside className={`fixed inset-y-0 left-0 z-[60] w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <div className="flex flex-col h-full">
                 <div className="p-8 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2.5">

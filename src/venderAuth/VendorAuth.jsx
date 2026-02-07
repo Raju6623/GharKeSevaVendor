@@ -301,6 +301,44 @@ const VendorAuth = function () {
     return true;
   };
 
+  // Image Compression Utility
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+          }, 'image/jpeg', 0.7); // 70% Quality
+        };
+      };
+    });
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!validateStep()) return;
@@ -331,13 +369,14 @@ const VendorAuth = function () {
       }
     });
 
-    // Explicitly append files to ensure they are caught by multer
-    if (regData.vendorPhoto) formData.append('vendorPhoto', regData.vendorPhoto);
-    if (regData.aadharFront) formData.append('aadharFront', regData.aadharFront);
-    if (regData.aadharBack) formData.append('aadharBack', regData.aadharBack);
-    if (regData.panCard) formData.append('panCard', regData.panCard);
-    if (regData.experienceCert) formData.append('experienceCert', regData.experienceCert);
+    // Compress and append files
     try {
+      if (regData.vendorPhoto) formData.append('vendorPhoto', await compressImage(regData.vendorPhoto));
+      if (regData.aadharFront) formData.append('aadharFront', await compressImage(regData.aadharFront));
+      if (regData.aadharBack) formData.append('aadharBack', await compressImage(regData.aadharBack));
+      if (regData.panCard) formData.append('panCard', await compressImage(regData.panCard));
+      if (regData.experienceCert) formData.append('experienceCert', await compressImage(regData.experienceCert));
+
       const res = await api.post('/vendor/register', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -486,7 +525,7 @@ const VendorAuth = function () {
                       </button>
                     </>
                   ) : !isMobileVerified && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 py-4">
+                    <div key="otp-step" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 py-4">
                       <div className="space-y-2">
                         <label className={labelClass}>Enter 6-Digit OTP</label>
                         <input

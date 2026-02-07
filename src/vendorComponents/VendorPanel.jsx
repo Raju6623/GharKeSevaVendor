@@ -170,7 +170,7 @@ function VendorPanel() {
 
   // Scroll to top on tab change
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Scroll behavior removed for smoother navigation
   }, [activeTab]);
 
   // Location Sync

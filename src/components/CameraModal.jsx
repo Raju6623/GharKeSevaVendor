@@ -75,48 +75,53 @@ const CameraModal = ({ isOpen, onClose, onCapture, title = "Identity Scan" }) =>
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            // Sampling at a smaller scale for performance
-            const sampleWidth = 100;
-            const sampleHeight = 100;
-            canvas.width = sampleWidth;
-            canvas.height = sampleHeight;
+            // Smaller sampling for performance
+            const sW = 100;
+            const sH = 100;
+            if (canvas.width !== sW) {
+                canvas.width = sW;
+                canvas.height = sH;
+            }
 
-            ctx.drawImage(video, 0, 0, sampleWidth, sampleHeight);
-            const frameData = ctx.getImageData(0, 0, sampleWidth, sampleHeight).data;
+            ctx.drawImage(video, 0, 0, sW, sH);
+            const frameData = ctx.getImageData(0, 0, sW, sH).data;
 
             if (prevFrameData.current) {
                 let diff = 0;
                 let skinPresence = 0;
 
-                // Compare frame data and check for "face-like" colors
-                for (let i = 0; i < frameData.length; i += 20) { // Sample every 5th pixel (4 bytes per pixel)
+                // Sample every 5th pixel (20 bytes increment)
+                for (let i = 0; i < frameData.length; i += 20) {
                     const r = frameData[i];
                     const g = frameData[i + 1];
                     const b = frameData[i + 2];
 
-                    // Movement detection (simple pixel change)
                     const pr = prevFrameData.current[i];
                     diff += Math.abs(r - pr);
 
-                    // Basic Skin Color Heuristic (R > G > B and some range checks)
-                    if (r > 60 && g > 40 && b > 20 && r > g && r > b) {
+                    // Improved Skin Color Detection (Standard YCbCr based heuristic simplified)
+                    // Usually: R > 95, G > 40, B > 20, R > G, R > B
+                    // Relaxed for laptop cameras/poor lighting
+                    if (r > 50 && g > 30 && b > 20 && r > g) {
                         skinPresence++;
                     }
                 }
 
-                const movementScore = diff / (frameData.length / 20);
-                const skinScore = skinPresence / (frameData.length / 80); // Adjusted for sample rate
+                const pixelCount = frameData.length / 4;
+                const sampleCount = frameData.length / 20;
+                const movementScore = diff / sampleCount;
+                const skinScore = skinPresence / sampleCount;
 
-                // STABILITY & PRESENCE LOGIC
-                // MovementScore < 10 is very steady
-                // SkinScore > 0.1 means some skin-like color is present
-                const steady = movementScore < 15;
-                const faceDetected = skinScore > 0.15;
+                // RELAXED THRESHOLDS FOR LAPTOPS (More noise/grain)
+                // movementScore < 30 (relaxed from 15)
+                // skinScore > 0.12 (standard for face occupying ~15% of frame)
+                const steady = movementScore < 40;
+                const faceDetected = skinScore > 0.1;
 
                 if (steady && faceDetected) {
                     setIsSteady(true);
                     setLockProgress(prev => {
-                        const next = prev + 4;
+                        const next = prev + 5;
                         if (next >= 100) {
                             setScanStatus('ready');
                             return 100;
@@ -124,10 +129,10 @@ const CameraModal = ({ isOpen, onClose, onCapture, title = "Identity Scan" }) =>
                         return next;
                     });
                 } else {
-                    // IF FACE REMOVED OR MOVING -> RESET TO RED
+                    // LOST FOCUS: Reset instantly as per requirement
                     setIsSteady(false);
                     setScanStatus('scanning');
-                    setLockProgress(prev => Math.max(0, prev - 10)); // Faster drain
+                    setLockProgress(0);
                 }
             }
             prevFrameData.current = frameData;
@@ -139,15 +144,18 @@ const CameraModal = ({ isOpen, onClose, onCapture, title = "Identity Scan" }) =>
     const capturePhoto = () => {
         if (scanStatus !== 'ready') return;
 
+        // Stop analysis loop before final capture
+        if (frameRef.current) cancelAnimationFrame(frameRef.current);
+
         const video = videoRef.current;
         const canvas = canvasRef.current;
         if (video && canvas) {
             const context = canvas.getContext('2d');
-            // Full resolution for the final capture
+            // Full resolution capture
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
             setCapturedImage(dataUrl);
             stopCamera();
         }

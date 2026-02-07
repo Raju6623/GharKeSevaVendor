@@ -247,8 +247,9 @@ const VendorAuth = function () {
     }, 1000);
   };
 
-  const handleVerifyOtp = () => {
-    if (otpCode === '123456') {
+  const handleVerifyOtp = (code) => {
+    const codeToVerify = code || otpCode;
+    if (codeToVerify === '123456') {
       setIsMobileVerified(true);
       Toast.fire({ icon: "success", title: "Verified!" });
       setCurrentStep(2);
@@ -484,50 +485,34 @@ const VendorAuth = function () {
                       </button>
                     </>
                   ) : !isMobileVerified && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <div className="bg-indigo-50 p-4 rounded-xl text-center border border-indigo-100">
-                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Code sent to</p>
-                        <div className="flex items-center justify-center gap-3">
-                          <p className="text-base font-black text-[#2d308b] tracking-wider">+91 {regData.userPhone}</p>
-                          <button
-                            type="button"
-                            onClick={() => { setOtpSent(false); setOtpCode(''); }}
-                            className="p-1.5 bg-white text-indigo-600 rounded-full shadow-sm hover:bg-indigo-600 hover:text-white transition-all"
-                            title="Change Number"
-                          >
-                            <RefreshCw size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 py-4">
+                      <div className="space-y-2">
                         <label className={labelClass}>Enter 6-Digit OTP</label>
                         <input
                           type="text"
                           maxLength="6"
                           inputMode="numeric"
-                          className={`${inputClass} text-center tracking-[0.5em] font-black text-lg focus:border-[#2d308b]`}
+                          className={`${inputClass} text-center tracking-[0.5em] font-black text-xl py-5 focus:border-[#2d308b] shadow-inner bg-slate-50/50`}
                           placeholder="••••••"
-                          onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                          value={otpCode}
+                          onChange={e => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            setOtpCode(val);
+                            if (val.length === 6) {
+                              handleVerifyOtp(val);
+                            }
+                          }}
                           autoFocus
                         />
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={handleVerifyOtp}
-                        className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-                      >
-                        Verify & Continue
-                      </button>
-
-                      <div className="text-center">
+                      <div className="text-center pt-2">
                         <button
                           type="button"
                           onClick={handleSendOtp}
                           className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
                         >
-                          Didn't get the code? <span className="text-indigo-600">Resend OTP</span>
+                          Didn't get the code? <span className="text-indigo-600 underline">Resend OTP</span>
                         </button>
                       </div>
                     </div>

@@ -410,6 +410,7 @@ const VendorAuth = function () {
   const inputClass = "w-full p-2.5 bg-white border border-slate-300 rounded-md text-sm font-medium focus:border-indigo-600 outline-none transition-all";
   const labelClass = "text-[10px] font-black uppercase text-slate-500 mb-1 block tracking-wider";
 
+  // Force refresh
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
       <div className="w-full max-w-5xl bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col md:flex-row overflow-hidden">

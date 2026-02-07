@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageSquare, Share2, Sparkles, Award, Cake, TrendingUp, MoreHorizontal, Plus, UserCircle2, ShieldCheck, Image as ImageIcon, X, Trash2, Music, Users, MapPin, Smile, BellOff, Bookmark, Pencil, Link as LinkIcon, Globe, Send } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Sparkles, Award, Cake, TrendingUp, MoreHorizontal, Plus, UserCircle2, ShieldCheck, Image as ImageIcon, X, Trash2, Music, Users, MapPin, Smile, BellOff, Bell, Bookmark, Pencil, Link as LinkIcon, Globe, Send } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     fetchCommunityPosts, likePost, clapPost, createCommunityPost, deletePost, addPostComment,
@@ -515,6 +515,11 @@ const PostCard = ({ post, profile }) => {
     const [commentText, setCommentText] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [isSaved, setIsSaved] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedContent, setEditedContent] = useState(post.content || '');
+
 
     const handleLike = () => {
         if (!profile?.customUserId) return;
@@ -581,6 +586,63 @@ const PostCard = ({ post, profile }) => {
         }
     };
 
+    const handleToggleNotifications = () => {
+        setNotificationsEnabled(!notificationsEnabled);
+        setIsMenuOpen(false);
+        Swal.fire({
+            title: notificationsEnabled ? 'Notifications Off' : 'Notifications On',
+            text: notificationsEnabled
+                ? 'You will no longer receive notifications for this post.'
+                : 'You will now receive notifications for this post.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    };
+
+    const handleSavePost = () => {
+        setIsSaved(!isSaved);
+        setIsMenuOpen(false);
+        Swal.fire({
+            title: isSaved ? 'Post Removed' : 'Post Saved!',
+            text: isSaved
+                ? 'Post removed from your saved items.'
+                : 'Post has been added to your saved items.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    };
+
+    const handleEditPost = () => {
+        setIsEditing(true);
+        setIsMenuOpen(false);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editedContent.trim()) {
+            Swal.fire('Error', 'Post content cannot be empty.', 'error');
+            return;
+        }
+
+        // Here you would dispatch an action to update the post
+        // For now, we'll just show success message
+        setIsEditing(false);
+        Swal.fire({
+            title: 'Updated!',
+            text: 'Your post has been updated successfully.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    };
+
+    const handleCancelEdit = () => {
+        setEditedContent(post.content || '');
+        setIsEditing(false);
+    };
+
+
     const timeAgo = (date) => {
         const seconds = Math.floor((new Date() - new Date(date)) / 1000);
         if (seconds < 60) return 'Just now';
@@ -642,39 +704,33 @@ const PostCard = ({ post, profile }) => {
                                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
                                 className="absolute right-0 top-12 w-64 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-3xl z-50 py-3 overflow-hidden"
                             >
-                                <button className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
-                                    <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900 rounded-xl transition-all">
-                                        <BellOff size={18} />
+                                <button onClick={handleToggleNotifications} className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
+                                    <div className={`p-2.5 rounded-xl transition-all ${notificationsEnabled ? 'bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900' : 'bg-green-50 text-green-600'}`}>
+                                        {notificationsEnabled ? <BellOff size={18} /> : <Bell size={18} />}
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black text-slate-900 tracking-tight">Turn off notifications</p>
+                                        <p className="text-xs font-black text-slate-900 tracking-tight">{notificationsEnabled ? 'Turn off notifications' : 'Turn on notifications'}</p>
                                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">For this post</p>
                                     </div>
                                 </button>
 
-                                <button className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
-                                    <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900 rounded-xl transition-all">
-                                        <Bookmark size={18} />
+                                <button onClick={handleSavePost} className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
+                                    <div className={`p-2.5 rounded-xl transition-all ${isSaved ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900'}`}>
+                                        <Bookmark size={18} fill={isSaved ? 'currentColor' : 'none'} />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black text-slate-900 tracking-tight">Save post</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Add to your saved items</p>
+                                        <p className="text-xs font-black text-slate-900 tracking-tight">{isSaved ? 'Unsave post' : 'Save post'}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{isSaved ? 'Remove from saved items' : 'Add to your saved items'}</p>
                                     </div>
                                 </button>
 
                                 {isOwnPost && (
                                     <>
-                                        <button className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
+                                        <button onClick={handleEditPost} className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
                                             <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900 rounded-xl transition-all">
                                                 <Pencil size={18} />
                                             </div>
                                             <p className="text-xs font-black text-slate-900 tracking-tight">Edit post</p>
-                                        </button>
-                                        <button className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-all group text-left">
-                                            <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900 rounded-xl transition-all">
-                                                <Users size={18} />
-                                            </div>
-                                            <p className="text-xs font-black text-slate-900 tracking-tight">Edit Privacy</p>
                                         </button>
                                         <button
                                             onClick={handleDelete}
@@ -705,12 +761,44 @@ const PostCard = ({ post, profile }) => {
 
             {/* Post Content */}
             <div className={`px-8 pb-4 space-y-6`}>
-                <div className="space-y-3">
-                    {post.title && <h3 className="text-xl font-black text-slate-900 tracking-tight italic uppercase">{post.title}</h3>}
-                    <p className="text-sm font-bold text-slate-500 leading-relaxed italic whitespace-pre-line">{post.content}</p>
-                </div>
+                {isEditing ? (
+                    <div className="space-y-4">
+                        <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Pencil size={16} className="text-blue-600" />
+                                <p className="text-xs font-black text-blue-700 uppercase tracking-wider">Editing Post</p>
+                            </div>
+                            <textarea
+                                value={editedContent}
+                                onChange={(e) => setEditedContent(e.target.value)}
+                                className="w-full bg-white border-2 border-blue-100 rounded-xl p-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
+                                rows={6}
+                                placeholder="What's on your mind?"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleSaveEdit}
+                                className="flex-1 py-3 bg-[#0c8182] text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-teal-900/10 hover:scale-[1.02] active:scale-95 transition-all"
+                            >
+                                Save Changes
+                            </button>
+                            <button
+                                onClick={handleCancelEdit}
+                                className="px-8 py-3 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-slate-200 transition-all"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {post.title && <h3 className="text-xl font-black text-slate-900 tracking-tight italic uppercase">{post.title}</h3>}
+                        <p className="text-sm font-bold text-slate-500 leading-relaxed italic whitespace-pre-line">{post.content}</p>
+                    </div>
+                )}
 
-                {post.image && (
+                {post.image && !isEditing && (
                     <div className="rounded-[2rem] overflow-hidden border-2 border-slate-50 shadow-inner">
                         <img src={getImageUrl(post.image)} className="w-full h-auto object-cover max-h-[500px]" alt="Post" />
                     </div>

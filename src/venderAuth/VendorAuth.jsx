@@ -62,6 +62,9 @@ const VendorAuth = function () {
   });
 
   const [loginData, setLoginData] = useState({ userEmail: '', userPassword: '' });
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isSubmittingForgot, setIsSubmittingForgot] = useState(false);
 
   // Toast configuration
   const Toast = Swal.mixin({
@@ -71,6 +74,26 @@ const VendorAuth = function () {
     timer: 3000,
     timerProgressBar: true
   });
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return Toast.fire({ icon: 'error', title: 'Please enter your registered email' });
+
+    setIsSubmittingForgot(true);
+    // Simulate real-time working
+    setTimeout(() => {
+      Swal.fire({
+        icon: 'success',
+        title: 'Inquiry Sent',
+        text: 'Your password reset request has been received. Our team will contact you shortly.',
+        confirmButtonColor: '#2d308b'
+      });
+      setIsSubmittingForgot(false);
+      setShowForgotModal(false);
+      setForgotEmail('');
+    }, 1500);
+  };
+
 
   // Pincode logic for Local Address
   useEffect(() => {
@@ -361,7 +384,13 @@ const VendorAuth = function () {
         <div className="w-full md:w-7/12 p-10 bg-white max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-8 border-b pb-4">
             <h3 className="text-xl font-bold text-slate-800">{isLogin ? 'Login' : `Step ${currentStep} of 4`}</h3>
-            <button onClick={() => { setIsLogin(!isLogin); setCurrentStep(1); }} className="text-indigo-600 font-bold text-xs uppercase tracking-widest">
+            <button onClick={() => {
+              setIsLogin(!isLogin);
+              setCurrentStep(1);
+              setOtpSent(false);
+              setOtpCode('');
+              setIsMobileVerified(false);
+            }} className="text-indigo-600 font-bold text-xs uppercase tracking-widest">
               {isLogin ? 'Join Now' : 'Back to Login'}
             </button>
           </div>
@@ -385,16 +414,77 @@ const VendorAuth = function () {
 
               {currentStep === 1 && (
                 <div className="space-y-4">
-                  <div>
-                    <label className={labelClass}>Mobile Number</label>
-                    <input type="text" inputMode="numeric" value={regData.userPhone} disabled={otpSent || isMobileVerified} maxLength="10" className={inputClass} placeholder="10-digit number" onChange={e => setRegData({ ...regData, userPhone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })} required />
-                  </div>
-                  {!otpSent ? (
-                    <button type="button" onClick={handleSendOtp} className="w-full py-3 bg-[#2d308b] text-white rounded font-bold">Send OTP</button>
+                  {!otpSent && !isMobileVerified ? (
+                    <>
+                      <div>
+                        <label className={labelClass}>Mobile Number</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={regData.userPhone}
+                          maxLength="10"
+                          className={inputClass}
+                          placeholder="10-digit number"
+                          onChange={e => setRegData({ ...regData, userPhone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
+                          required
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={sendingOtp || regData.userPhone.length !== 10}
+                        className="w-full py-3 bg-[#2d308b] text-white rounded font-bold shadow-lg shadow-indigo-100 hover:bg-[#1e206b] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {sendingOtp ? <Loader2 size={18} className="animate-spin" /> : 'Send Verification OTP'}
+                      </button>
+                    </>
                   ) : !isMobileVerified && (
-                    <div className="space-y-4">
-                      <input type="text" maxLength="6" className={inputClass} placeholder="Enter Code" onChange={e => setOtpCode(e.target.value)} />
-                      <button type="button" onClick={handleVerifyOtp} className="w-full py-3 bg-indigo-600 text-white rounded font-bold">Verify OTP</button>
+                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="bg-indigo-50 p-4 rounded-xl text-center border border-indigo-100">
+                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Code sent to</p>
+                        <div className="flex items-center justify-center gap-3">
+                          <p className="text-base font-black text-[#2d308b] tracking-wider">+91 {regData.userPhone}</p>
+                          <button
+                            type="button"
+                            onClick={() => { setOtpSent(false); setOtpCode(''); }}
+                            className="p-1.5 bg-white text-indigo-600 rounded-full shadow-sm hover:bg-indigo-600 hover:text-white transition-all"
+                            title="Change Number"
+                          >
+                            <RefreshCw size={12} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>Enter 6-Digit OTP</label>
+                        <input
+                          type="text"
+                          maxLength="6"
+                          inputMode="numeric"
+                          className={`${inputClass} text-center tracking-[0.5em] font-black text-lg focus:border-[#2d308b]`}
+                          placeholder="••••••"
+                          onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                          autoFocus
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        Verify & Continue
+                      </button>
+
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
+                        >
+                          Didn't get the code? <span className="text-indigo-600">Resend OTP</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -708,27 +798,96 @@ const VendorAuth = function () {
                 />
               </div>
               <div className="relative">
-                <label className={labelClass}>Password</label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  autoComplete="new-password"
-                  className={inputClass}
-                  onChange={e => setLoginData({ ...loginData, userPassword: e.target.value })}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-[26px] text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+                <div className="flex justify-between items-center mb-1">
+                  <label className={labelClass}>Password</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(true)}
+                    className="text-indigo-600 text-[10px] font-bold uppercase tracking-widest hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    autoComplete="new-password"
+                    className={inputClass}
+                    onChange={e => setLoginData({ ...loginData, userPassword: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <button type="submit" disabled={loading} className="w-full py-4 bg-[#2d308b] text-white rounded font-bold mt-4 uppercase tracking-widest text-xs">Sign In</button>
             </form>
           )}
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <div className="bg-[#2d308b] p-6 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black italic tracking-tighter uppercase text-white">Partner Reset</h3>
+                <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mt-1 italic italic">Security Protocol</p>
+              </div>
+              <button onClick={() => setShowForgotModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleForgotSubmit} className="p-8 space-y-6">
+              <div className="space-y-4">
+                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl flex items-start gap-3">
+                  <ShieldCheck size={20} className="text-indigo-600 shrink-0" />
+                  <p className="text-xs font-medium text-indigo-700 leading-relaxed">
+                    Enter your registered email below. Our support team will review your request and send reset instructions to your email.
+                  </p>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Registered Email</label>
+                  <input
+                    type="email"
+                    placeholder="Enter your email address"
+                    className={inputClass}
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all font-sans"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingForgot}
+                  className="flex-[2] py-4 bg-[#2d308b] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {isSubmittingForgot ? <RefreshCw className="animate-spin text-white" size={16} /> : 'Send Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

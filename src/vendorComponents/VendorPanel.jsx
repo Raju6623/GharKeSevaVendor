@@ -313,7 +313,6 @@ function VendorPanel() {
   const mainNavItems = [
     { id: 'home', label: t.home, icon: LayoutDashboard },
     { id: 'history', label: t.history, icon: History },
-    { id: 'team', label: t.team, icon: Users },
     { id: 'wallet', label: t.wallet, icon: Wallet },
     { id: 'hub', label: t.hub, icon: Briefcase },
     { id: 'parivaar', label: t.parivaar, icon: Sparkles },
@@ -363,7 +362,7 @@ function VendorPanel() {
   };
 
   const mobileNavItems = [
-    { id: 'team', label: t.team, icon: Users },
+    { id: 'parivaar', label: t.parivaar, icon: Sparkles },
     { id: 'wallet', label: t.wallet, icon: Wallet },
     { id: 'home', label: t.home, icon: LayoutDashboard },
     { id: 'offers', label: t.offers, icon: Tag },

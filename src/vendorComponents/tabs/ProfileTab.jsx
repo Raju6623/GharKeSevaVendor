@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, MapPin, Briefcase, Star, Mail, Phone, Shield, CheckCircle2, CreditCard, Building, Monitor, Smartphone, Globe, Landmark, Hash, Award, Edit2, Plus, X, Loader2, ChevronRight, Calendar, Users, BookOpen, HelpCircle, LogOut, MessageSquare, IndianRupee, ArrowLeft, Share2, ShoppingBag, MessageCircle, History } from 'lucide-react';
+import { User, MapPin, Briefcase, Star, Mail, Phone, Shield, CheckCircle2, CreditCard, Building, Monitor, Smartphone, Globe, Landmark, Hash, Award, Edit2, Plus, X, Loader2, ChevronRight, Calendar, Users, BookOpen, HelpCircle, LogOut, MessageSquare, IndianRupee, ArrowLeft, Share2, ShoppingBag, MessageCircle, History, Sparkles } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import Swal from 'sweetalert2';
 import axios from 'axios';
@@ -259,7 +259,7 @@ const ProfileTab = ({ profile, setIsReviewsModalOpen, setActiveTab }) => {
                     {/* Main Menu Items */}
                     <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100 mb-6">
                         <MenuItem icon={User} label="Complete Profile" sublabel="Personal details, Father's name, etc." onClick={() => setCurrentView('personal')} color="text-indigo-600" />
-                        <MenuItem icon={Users} label={translations[useSelector(state => state.vendor.language)]?.team || "My Team"} sublabel="Manage your service team" onClick={() => setActiveTab('team')} color="text-emerald-600" />
+                        <MenuItem icon={Sparkles} label={translations[useSelector(state => state.vendor.language)]?.parivaar || "Gs Privar"} sublabel="Join the GS community" onClick={() => setActiveTab('parivaar')} color="text-emerald-600" />
                         <MenuItem icon={History} label="Job history" sublabel="View your past completed jobs" onClick={() => setActiveTab('history')} color="text-amber-600" />
                         <MenuItem icon={Briefcase} label="My Hub" sublabel="Manage expertise categories" onClick={() => setIsCatModalOpen(true)} color="text-blue-600" />
                         <MenuItem icon={IndianRupee} label="Credits" sublabel="Balance and transaction history" onClick={() => setActiveTab('dashboard')} color="text-purple-600" />

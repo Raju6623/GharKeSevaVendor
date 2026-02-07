@@ -5,10 +5,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchIncentives } from '../../redux/thunks/vendorThunk';
 import JobCard from '../shared/JobCard';
 import IncentiveCard from '../IncentiveCard';
+import confetti from 'canvas-confetti';
 
-const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept, onReject, onComplete, isActionLoading }) => {
+const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept, onReject, onComplete, isActionLoading, t }) => {
     const dispatch = useDispatch();
-    const { incentives } = useSelector(state => state.vendor);
+    const { incentives, language } = useSelector(state => state.vendor);
     const activeJobs = jobs.filter(j => j.bookingStatus !== 'Completed');
 
     useEffect(() => {
@@ -17,7 +18,36 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
         }
     }, [profile, jobs, dispatch]);
 
-    const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    useEffect(() => {
+        if (isBirthdayToday()) {
+            const lastBlast = localStorage.getItem(`bdayBlast_${profile?.customUserId}`);
+            const todayStr = new Date().toDateString();
+
+            if (lastBlast !== todayStr) {
+                const duration = 3 * 1000;
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+                const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+                const interval = setInterval(function () {
+                    const timeLeft = animationEnd - Date.now();
+
+                    if (timeLeft <= 0) {
+                        return clearInterval(interval);
+                    }
+
+                    const particleCount = 50 * (timeLeft / duration);
+                    confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+                    confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+                }, 250);
+
+                localStorage.setItem(`bdayBlast_${profile?.customUserId}`, todayStr);
+            }
+        }
+    }, [profile]);
+
+    const currentDate = new Date().toLocaleDateString(language === 'Hindi' ? 'hi-IN' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
     // Birthday Logic
     const isBirthdayToday = () => {
@@ -41,11 +71,10 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
                             🎂
                         </div>
                         <div className="text-center md:text-left">
-                            <h2 className="text-3xl font-black tracking-tight italic uppercase">Happy Birthday, {profile?.firstName}! 🎊</h2>
-                            <p className="text-rose-50 font-bold mt-1 text-sm md:text-base">GharKeSeva parivaar ki aur se aapko janamdin ki dheron shubhkamnayein. Aapka din shubh ho!</p>
+                            <h2 className="text-3xl font-black tracking-tight italic uppercase">{t.happyBirthday}, {profile?.firstName}! 🎊</h2>
+                            <p className="text-rose-50 font-bold mt-1 text-sm md:text-base">{t.birthdayWishHome}</p>
                         </div>
                     </div>
-                    {/* Floating Particles/Shapes could be added here with motion */}
                 </div>
             )}
 
@@ -62,12 +91,12 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
                             <span>{currentDate}</span>
                         </div>
                         <h2 className="text-3xl md:text-5xl font-black tracking-tighter mb-2 leading-tight">
-                            Welcome, <br className="hidden md:block" />{profile?.firstName || 'Partner'}!
+                            {t.welcome}, <br className="hidden md:block" />{profile?.firstName || 'Partner'}!
                         </h2>
                         <p className="text-indigo-100/80 font-medium text-sm md:text-base max-w-sm">
                             {activeJobs.length > 0
-                                ? `You have ${activeJobs.length} active jobs requiring your attention.`
-                                : "You're all caught up! No pending jobs at the moment."}
+                                ? `${t.jobsCountStart}${activeJobs.length}${t.jobsCountEnd}`
+                                : t.noJobsPending}
                         </p>
                     </div>
 
@@ -78,7 +107,7 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
                         </div>
                         <div>
                             <span className="block text-3xl font-black leading-none">{activeJobs.length}</span>
-                            <span className="text-[10px] uppercase font-bold text-indigo-200 tracking-wider">Active Jobs</span>
+                            <span className="text-[10px] uppercase font-bold text-indigo-200 tracking-wider">{t.activeJobs}</span>
                         </div>
                     </div>
                 </div>
@@ -90,12 +119,12 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 px-2">
                             <Zap className="text-amber-500 fill-amber-500" size={20} />
-                            <h3 className="font-black text-lg text-slate-800 tracking-tight">Special Offers</h3>
+                            <h3 className="font-black text-lg text-slate-800 tracking-tight">{t.specialOffers}</h3>
                         </div>
                         <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x snap-mandatory px-2">
                             {incentives.map((incentive) => (
                                 <div key={incentive._id} className="min-w-[85%] md:min-w-[400px] snap-center">
-                                    <IncentiveCard incentive={incentive} />
+                                    <IncentiveCard incentive={incentive} t={t} />
                                 </div>
                             ))}
                         </div>
@@ -108,18 +137,18 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
                 <div className="flex items-end justify-between px-2">
                     <div>
                         <h3 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                            Job Queue
+                            {t.jobQueue}
                             <span className="flex h-2.5 w-2.5 relative">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                             </span>
                         </h3>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mt-1">Manage your schedule</p>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mt-1">{t.manageSchedule}</p>
                     </div>
 
                     {activeJobs.length > 0 && (
                         <span className="px-4 py-1.5 bg-slate-900 text-white text-[10px] font-black rounded-lg shadow-lg shadow-slate-200 uppercase tracking-widest">
-                            {activeJobs.length} Pending
+                            {activeJobs.length} {t.pending}
                         </span>
                     )}
                 </div>
@@ -134,6 +163,7 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
                                 onReject={onReject}
                                 onComplete={onComplete}
                                 isActionLoading={isActionLoading}
+                                t={t}
                             />
                         </div>
                     ))}
@@ -143,9 +173,9 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
                             <div className="w-24 h-24 bg-slate-50 group-hover:bg-[#2d308b]/5 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300 group-hover:text-[#2d308b] transition-all duration-500">
                                 <TrendingUp size={40} />
                             </div>
-                            <h4 className="text-slate-800 font-black text-lg mb-2">Queue is Empty</h4>
+                            <h4 className="text-slate-800 font-black text-lg mb-2">{t.queueEmpty}</h4>
                             <p className="text-slate-400 text-sm font-medium max-w-xs mx-auto">
-                                New bookings will appear here instantly. Stay online to receive jobs!
+                                {t.stayOnline}
                             </p>
                         </div>
                     )}
@@ -157,7 +187,7 @@ const HomeTab = ({ profile, jobs, showAllJobs, setShowAllJobs, onChat, onAccept,
                             onClick={() => setShowAllJobs(!showAllJobs)}
                             className="bg-white px-8 py-4 rounded-2xl text-xs font-black text-indigo-900 uppercase tracking-widest shadow-xl shadow-indigo-100 border border-indigo-50 hover:bg-slate-50 transition-all transform active:scale-95"
                         >
-                            {showAllJobs ? 'Show Less Jobs' : `View All ${activeJobs.length} Jobs`}
+                            {showAllJobs ? t.showLess : `${t.viewAll} ${activeJobs.length} ${t.activeJobs}`}
                         </button>
                     </div>
                 )}

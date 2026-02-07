@@ -11,11 +11,52 @@ import CameraModal from '../components/CameraModal';
 
 
 // Aadhar Formatter (adds space every 4 digits)
-const formatAadhar = (value) => {
-  const cleaned = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-  const parts = cleaned.match(/.{1, 4}/g);
-  if (parts) return parts.join(' ').substring(0, 14);
-  return cleaned;
+const formatAadhar = (val) => {
+  const v = val.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+  const matches = v.match(/\d{4,12}/g);
+  const match = (matches && matches[0]) || '';
+  const parts = [];
+  for (let i = 0, len = match.length; i < len; i += 4) {
+    parts.push(match.substring(i, i + 4));
+  }
+  if (parts.length > 0) {
+    return parts.join(' ').substring(0, 14);
+  } else {
+    return v;
+  }
+};
+
+const popularBanks = [
+  "State Bank of India",
+  "HDFC Bank",
+  "ICICI Bank",
+  "Punjab National Bank",
+  "Axis Bank",
+  "Canara Bank",
+  "Bank of Baroda",
+  "Union Bank of India",
+  "IDBI Bank",
+  "IndusInd Bank",
+  "Kotak Mahindra Bank",
+  "Yes Bank",
+  "Federal Bank",
+  "Indian Bank",
+  "UCO Bank",
+  "Central Bank of India",
+  "Bank of India",
+  "Indian Overseas Bank",
+  "IDFC First Bank",
+  "Bandhan Bank",
+  "Airtel Payments Bank",
+  "Jio Payments Bank",
+  "Paytm Payments Bank"
+].sort();
+
+const calculateAge = (dob) => {
+  const birthday = new Date(dob);
+  const ageDifMs = Date.now() - birthday.getTime();
+  const ageDate = new Date(ageDifMs);
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
 };
 
 const VendorAuth = function () {
@@ -228,6 +269,10 @@ const VendorAuth = function () {
       }
       if (regData.userPassword.length < 6) { Toast.fire({ icon: "warning", title: "Password: Min 6 chars" }); return false; }
       if (regData.userPassword !== regData.confirmPassword) { Toast.fire({ icon: "warning", title: "Passwords do not match" }); return false; }
+      if (calculateAge(regData.dob) < 16) {
+        Swal.fire({ icon: "warning", title: "Age Not Valid", text: "Vendor must be at least 16 years old." });
+        return false;
+      }
     }
     if (currentStep === 3) {
       if (!regData.localStreet || !regData.localPincode || !regData.permanentStreet || !regData.permanentPincode) {
@@ -536,7 +581,13 @@ const VendorAuth = function () {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div><label className={labelClass}>Gender</label><select className={inputClass} value={regData.gender} onChange={e => setRegData({ ...regData, gender: e.target.value })}><option value="" disabled hidden>Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
-                    <div><label className={labelClass}>DOB</label><input type="date" max={new Date().toISOString().split('T')[0]} className={inputClass} value={regData.dob} onChange={e => setRegData({ ...regData, dob: e.target.value })} required /></div>
+                    <div><label className={labelClass}>DOB</label><input type="date" max={new Date().toISOString().split('T')[0]} className={inputClass} value={regData.dob} onChange={e => {
+                      const dob = e.target.value;
+                      setRegData({ ...regData, dob });
+                      if (dob && calculateAge(dob) < 16) {
+                        Swal.fire({ icon: "warning", title: "Age Not Valid", text: "Vendor must be at least 16 years old." });
+                      }
+                    }} required /></div>
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -756,9 +807,49 @@ const VendorAuth = function () {
                   <div className="space-y-4 pt-4 border-t border-slate-100">
                     <h4 className="text-xs font-bold text-slate-400 uppercase">Settlement Bank</h4>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><label className={labelClass}>Bank Name</label><input type="text" className={`${inputClass} uppercase`} value={regData.bankName} onChange={e => setRegData({ ...regData, bankName: e.target.value.toUpperCase() })} required /></div>
-                      <div><label className={labelClass}>IFSC Code</label><input type="text" maxLength="11" className={`${inputClass} uppercase`} value={regData.ifscCode} onChange={e => setRegData({ ...regData, ifscCode: e.target.value })} required /></div>
+                      <div className="relative">
+                        <label className={labelClass}>Bank Name</label>
+                        <select
+                          value={regData.bankName}
+                          onChange={e => setRegData({ ...regData, bankName: e.target.value })}
+                          className={`${inputClass} appearance-none cursor-pointer`}
+                          required
+                        >
+                          <option value="">-- Select Bank --</option>
+                          {popularBanks.map(bank => (
+                            <option key={bank} value={bank}>{bank}</option>
+                          ))}
+                          <option value="Other">Other Bank</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass}>IFSC Code</label>
+                        <input
+                          type="text"
+                          maxLength="11"
+                          className={`${inputClass} uppercase ${regData.ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(regData.ifscCode) && regData.ifscCode.length === 11 ? 'border-red-500 text-red-600 focus:border-red-500' : ''}`}
+                          value={regData.ifscCode}
+                          onChange={e => setRegData({ ...regData, ifscCode: e.target.value.toUpperCase() })}
+                          placeholder="e.g. SBIN0012345"
+                          required
+                        />
+                        {regData.ifscCode && regData.ifscCode.length === 11 && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(regData.ifscCode) && (
+                          <p className="text-[9px] text-red-500 mt-1 font-bold">Invalid IFSC Format</p>
+                        )}
+                      </div>
                     </div>
+                    {regData.bankName === 'Other' && (
+                      <div className="animate-in fade-in duration-300">
+                        <label className={labelClass}>Custom Bank Name</label>
+                        <input
+                          type="text"
+                          className={`${inputClass} uppercase`}
+                          placeholder="Type your bank name"
+                          onChange={e => setRegData({ ...regData, customBank: e.target.value, bankName: 'Other' })}
+                          required
+                        />
+                      </div>
+                    )}
                     <div>
                       <label className={labelClass}>Account Number</label>
                       <input type="text" maxLength="18" className={inputClass} value={regData.accountNumber} onChange={e => setRegData({ ...regData, accountNumber: e.target.value.replace(/[^0-9]/g, '') })} required />

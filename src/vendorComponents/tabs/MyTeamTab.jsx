@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 import CameraModal from '../../components/CameraModal';
 
 // --- MyTeamTab Component ---
-const MyTeamTab = ({ onBack }) => {
+const MyTeamTab = ({ onBack, t }) => {
     const dispatch = useDispatch();
     const { profile } = useSelector(state => state.vendor);
 
@@ -60,12 +60,12 @@ const MyTeamTab = ({ onBack }) => {
         const missingFields = requiredFields.filter(f => !formData[f]);
 
         if (missingFields.length > 0) {
-            Swal.fire({ icon: 'warning', title: 'Details Required', text: 'Please fill all address and personal details.', confirmButtonColor: '#0c8182' });
+            Swal.fire({ icon: 'warning', title: t.detailsRequired, text: 'Please fill all address and personal details.', confirmButtonColor: '#0c8182' });
             return;
         }
 
         if (!formData.aadharPhoto || !formData.selfiePhoto) {
-            Swal.fire({ icon: 'warning', title: 'Photos Required', text: 'Please upload Aadhar and Staff Selfie.', confirmButtonColor: '#0c8182' });
+            Swal.fire({ icon: 'warning', title: t.photosRequired, text: 'Please upload Aadhar and Staff Selfie.', confirmButtonColor: '#0c8182' });
             return;
         }
 
@@ -86,7 +86,7 @@ const MyTeamTab = ({ onBack }) => {
         setIsLoading(false);
 
         if (res.success) {
-            Swal.fire({ icon: 'success', title: 'Sent for Approval', text: `Registration request for ${fullName} submitted.`, confirmButtonColor: '#0c8182' });
+            Swal.fire({ icon: 'success', title: t.sentForApproval, text: `${t.registrationRequest} for ${fullName} submitted.`, confirmButtonColor: '#0c8182' });
             setIsAddModalOpen(false);
             resetForm();
         }
@@ -98,7 +98,7 @@ const MyTeamTab = ({ onBack }) => {
     };
 
     const handleDeleteMember = async (id) => {
-        const result = await Swal.fire({ title: 'Delete?', text: "Remove this staff member?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Yes' });
+        const result = await Swal.fire({ title: t.delete || 'Delete?', text: t.remove || "Remove this staff member?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: t.accept || 'Yes' });
         if (result.isConfirmed) {
             const updated = (profile?.teamMembers || []).filter(m => m.id !== id);
             dispatch(updateVendorProfile(profile.customUserId, { teamMembers: updated }));
@@ -116,31 +116,31 @@ const MyTeamTab = ({ onBack }) => {
                         <ChevronLeft size={20} />
                     </motion.button>
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">My Team</h1>
-                        <p className="text-sm font-medium text-slate-400 mt-1">Manage and track your authorized personnel</p>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">{t.team}</h1>
+                        <p className="text-sm font-medium text-slate-400 mt-1">{t.underDevelopment || 'Manage and track your authorized personnel'}</p>
                     </div>
                 </div>
                 <motion.button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-3 px-8 py-4 bg-[#0c8182] text-white rounded-2xl font-bold text-sm shadow-xl shadow-teal-50 hover:bg-[#0a6d6d] transition-all">
-                    <Plus size={18} /> Add New Member
+                    <Plus size={18} /> {t.addNewMember}
                 </motion.button>
             </header>
 
             {/* Content Body */}
             <main className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-3 space-y-6">
-                    <StatBox label="Active Staff" value={(profile?.teamMembers || []).filter(m => m.status === 'Active' || m.status === 'Verified').length} icon={<UserCheck size={20} />} color="emerald" />
-                    <StatBox label="Pending" value={(profile?.teamMembers || []).filter(m => m.status === 'Pending').length} icon={<Hourglass size={20} />} color="amber" />
-                    <StatBox label="Total Staff" value={profile?.teamMembers?.length || 0} icon={<Users size={20} />} color="indigo" />
+                    <StatBox label={t.activeStaff} value={(profile?.teamMembers || []).filter(m => m.status === 'Active' || m.status === 'Verified').length} icon={<UserCheck size={20} />} color="emerald" />
+                    <StatBox label={t.pending} value={(profile?.teamMembers || []).filter(m => m.status === 'Pending').length} icon={<Hourglass size={20} />} color="amber" />
+                    <StatBox label={t.totalStaff} value={profile?.teamMembers?.length || 0} icon={<Users size={20} />} color="indigo" />
                 </div>
 
                 <div className="lg:col-span-9">
                     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 min-h-[500px] overflow-hidden">
                         <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-slate-800 tracking-tight">Staff Registry</h3>
+                            <h3 className="text-lg font-bold text-slate-800 tracking-tight">{t.staffRegistry}</h3>
                         </div>
                         <div className="p-8 space-y-4">
                             {!profile?.teamMembers?.length ? (
-                                <div className="py-24 text-center opacity-40 italic font-medium">No staff members found in your registry...</div>
+                                <div className="py-24 text-center opacity-40 italic font-medium">{t.noStaffFound}</div>
                             ) : profile.teamMembers.map((member, i) => (
                                 <motion.div
                                     initial={{ opacity: 0, y: 10 }}
@@ -185,7 +185,7 @@ const MyTeamTab = ({ onBack }) => {
                             {/* Modal Sidebar */}
                             <div className="w-full md:w-80 bg-slate-950 p-12 text-white shrink-0 flex flex-col justify-between">
                                 <div>
-                                    <h2 className="text-4xl font-black italic mb-12 tracking-tighter">Add Staff</h2>
+                                    <h2 className="text-4xl font-black italic mb-12 tracking-tighter">{t.addNewMember}</h2>
                                     <div className="space-y-6 relative">
                                         <div className="flex items-center gap-4 py-4 px-6 bg-white/5 rounded-2xl border border-white/10">
                                             <UserCheck className="text-[#0c8182]" size={20} />
@@ -205,8 +205,8 @@ const MyTeamTab = ({ onBack }) => {
                             <div className="flex-1 p-14 overflow-y-auto">
                                 <div className="flex justify-between items-center mb-12">
                                     <div>
-                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Staff Registration</h3>
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Complete information entry</p>
+                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">{t.registrationRequest}</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{t.utilitySecure}</p>
                                     </div>
                                     <button onClick={() => setIsAddModalOpen(false)} className="w-12 h-12 bg-slate-50 hover:bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 transition-all"><X size={20} /></button>
                                 </div>
@@ -214,33 +214,33 @@ const MyTeamTab = ({ onBack }) => {
                                 <form onSubmit={handleAddMember} className="space-y-12">
                                     {/* Section 1: Personal Info */}
                                     <div className="space-y-8">
-                                        <SectionHeader title="Staff Information" />
+                                        <SectionHeader title={t.staffInformation} />
                                         <div className="grid grid-cols-2 gap-8">
-                                            <InputField label="First Name" value={formData.firstName} onChange={v => setFormData({ ...formData, firstName: v })} placeholder="e.g. Ramesh" />
-                                            <InputField label="Last Name" value={formData.lastName} onChange={v => setFormData({ ...formData, lastName: v })} placeholder="e.g. Kumar" />
+                                            <InputField label={t.firstName} value={formData.firstName} onChange={v => setFormData({ ...formData, firstName: v })} placeholder="e.g. Ramesh" />
+                                            <InputField label={t.lastName} value={formData.lastName} onChange={v => setFormData({ ...formData, lastName: v })} placeholder="e.g. Kumar" />
                                         </div>
                                         <div className="grid grid-cols-2 gap-8">
-                                            <InputField label="Mobile Number" type="tel" value={formData.phone} onChange={v => setFormData({ ...formData, phone: v })} placeholder="10-digit number" />
-                                            <InputField label="Email (Optional)" type="email" value={formData.email} onChange={v => setFormData({ ...formData, email: v })} placeholder="name@example.com" />
+                                            <InputField label={t.phone} type="tel" value={formData.phone} onChange={v => setFormData({ ...formData, phone: v })} placeholder="10-digit number" />
+                                            <InputField label={t.email + " (Optional)"} type="email" value={formData.email} onChange={v => setFormData({ ...formData, email: v })} placeholder="name@example.com" />
                                         </div>
                                     </div>
 
                                     {/* Section 2: Full Address */}
                                     <div className="space-y-8">
-                                        <SectionHeader title="Address Details" />
+                                        <SectionHeader title={t.addressDetails} />
                                         <div className="space-y-4">
-                                            <InputField label="Street Address" icon={<MapPin size={18} />} value={formData.street} onChange={v => setFormData({ ...formData, street: v })} placeholder="House No, Area, LandMark" />
+                                            <InputField label={t.addressDetails} icon={<MapPin size={18} />} value={formData.street} onChange={v => setFormData({ ...formData, street: v })} placeholder="House No, Area, LandMark" />
                                             <div className="grid grid-cols-3 gap-8">
-                                                <InputField label="Pincode" icon={<Hash size={14} />} value={formData.pincode} onChange={v => setFormData({ ...formData, pincode: v.replace(/[^0-9]/g, '').slice(0, 6) })} placeholder="6-digit" />
-                                                <InputField label="City" icon={<Globe size={14} />} value={formData.city} onChange={v => setFormData({ ...formData, city: v })} placeholder="District" />
-                                                <InputField label="State" icon={<Globe size={14} />} value={formData.state} onChange={v => setFormData({ ...formData, state: v })} placeholder="State" />
+                                                <InputField label={t.pincode || 'Pincode'} icon={<Hash size={14} />} value={formData.pincode} onChange={v => setFormData({ ...formData, pincode: v.replace(/[^0-9]/g, '').slice(0, 6) })} placeholder="6-digit" />
+                                                <InputField label={t.city} icon={<Globe size={14} />} value={formData.city} onChange={v => setFormData({ ...formData, city: v })} placeholder="District" />
+                                                <InputField label={t.state || 'State'} icon={<Globe size={14} />} value={formData.state} onChange={v => setFormData({ ...formData, state: v })} placeholder="State" />
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Section 3: Documents & Camera */}
                                     <div className="space-y-8">
-                                        <SectionHeader title="Verification & Photo" />
+                                        <SectionHeader title={t.financialDetails} />
                                         <div className="grid grid-cols-2 gap-8">
                                             <DocBox label="Aadhar Card" preview={previews.aadhar} onClick={() => aadharRef.current.click()} />
                                             <input type="file" ref={aadharRef} hidden accept="image/*" onChange={e => handleFileChange(e, 'aadhar')} />
@@ -257,15 +257,15 @@ const MyTeamTab = ({ onBack }) => {
                                                 </div>
                                             )}
                                             <div className="text-center">
-                                                <p className="font-black text-slate-800 tracking-tight">Staff Identity Portrait</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 italic">Click selfie on white background</p>
+                                                <p className="font-black text-slate-800 tracking-tight">{t.staffPortrait}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 italic">{t.underDevelopment || 'Click selfie on white background'}</p>
                                             </div>
                                             <button type="button" onClick={() => {
                                                 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                                                 if (isMobile) mobileSelfieRef.current.click();
                                                 else setIsCameraOpen(true);
                                             }} className="px-10 py-5 bg-[#0c8182] text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#0a6d6d] transition-all">
-                                                {previews.selfie ? 'Retake Photo' : 'Open Selfie Camera'}
+                                                {previews.selfie ? t.retakePhoto : t.openCamera}
                                             </button>
                                             <input type="file" ref={mobileSelfieRef} hidden accept="image/*" capture="user" onChange={e => handleFileChange(e, 'selfie')} />
                                         </div>
@@ -277,7 +277,7 @@ const MyTeamTab = ({ onBack }) => {
                                         disabled={isLoading}
                                         className="w-full py-8 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl hover:bg-black transition-all flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50"
                                     >
-                                        {isLoading ? <Loader2 className="animate-spin" /> : 'Register Staff Member'}
+                                        {isLoading ? <Loader2 className="animate-spin" /> : t.registerStaff}
                                     </button>
                                 </form>
                             </div>

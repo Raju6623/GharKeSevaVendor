@@ -115,9 +115,13 @@ const FinancialDetailsTab = ({ profile, onBack, onGoToWallet }) => {
                                 <SectionHeader icon={<Briefcase size={24} />} title="Personal Details" />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
                                     <LedgerEntry label="Full Name" value={`${profile?.firstName} ${profile?.lastName}`} />
-                                    <LedgerEntry label="Aadhar Number" value={profile?.aadharNumber} onEdit={() => setActiveModal('personal')} />
-                                    <LedgerEntry label="Date of Birth" value={profile?.dob} />
-                                    <LedgerEntry label="Gender" value={profile?.gender} />
+                                    <LedgerEntry
+                                        label={t.aadharNumber || "Aadhar Number"}
+                                        value={profile?.aadharNumber ? profile.aadharNumber.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim() : ''}
+                                        onEdit={() => setActiveModal('personal')}
+                                    />
+                                    <LedgerEntry label={t.dob || "Date of Birth"} value={profile?.dob} />
+                                    <LedgerEntry label={t.gender || "Gender"} value={profile?.gender} />
                                 </div>
                             </section>
 
@@ -187,9 +191,9 @@ const FinancialDetailsTab = ({ profile, onBack, onGoToWallet }) => {
 
             {/* Modals */}
             <AnimatePresence>
-                {activeModal === 'pan' && <PanModal isOpen={true} currentPan={profile?.panNumber} onClose={() => setActiveModal(null)} onSave={handleSave} isLoading={isLoading} />}
-                {activeModal === 'bank' && <BankModal isOpen={true} currentBank={{ bankName: profile?.bankName, accountNumber: profile?.accountNumber, ifscCode: profile?.ifscCode, accountHolderName: profile?.accountHolderName }} onClose={() => setActiveModal(null)} onSave={handleSave} isLoading={isLoading} />}
-                {activeModal === 'personal' && <PersonalDetailsModal isOpen={true} currentData={{ dob: profile?.dob, aadharNumber: profile?.aadharNumber, fathersName: profile?.fatherName, gender: profile?.gender }} onClose={() => setActiveModal(null)} onSave={handleSave} isLoading={isLoading} />}
+                {activeModal === 'pan' && <PanModal isOpen={true} t={t} currentPan={profile?.panNumber} onClose={() => setActiveModal(null)} onSave={handleSave} isLoading={isLoading} />}
+                {activeModal === 'bank' && <BankModal isOpen={true} t={t} currentBank={{ bankName: profile?.bankName, accountNumber: profile?.accountNumber, ifscCode: profile?.ifscCode, accountHolderName: profile?.accountHolderName }} onClose={() => setActiveModal(null)} onSave={handleSave} isLoading={isLoading} />}
+                {activeModal === 'personal' && <PersonalDetailsModal isOpen={true} t={t} currentData={{ dob: profile?.dob, aadharNumber: profile?.aadharNumber, fathersName: profile?.fatherName, gender: profile?.gender }} onClose={() => setActiveModal(null)} onSave={handleSave} isLoading={isLoading} />}
             </AnimatePresence>
         </div>
     );

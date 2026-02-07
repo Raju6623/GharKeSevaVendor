@@ -16,7 +16,7 @@ const getImageUrl = (path) => {
     return `${BASE_URL}/${path.replace(/^\/+/, '')}`;
 };
 
-const GSParivaarTab = ({ profile }) => {
+const GSParivaarTab = ({ profile, t }) => {
     const dispatch = useDispatch();
     const { communityPosts, suggestions, chatList, friendsList } = useSelector(state => state.vendor);
     const [activeFeed, setActiveFeed] = useState('feed'); // feed, myposts, chats
@@ -63,7 +63,7 @@ const GSParivaarTab = ({ profile }) => {
             });
             Toast.fire({
                 icon: 'info',
-                title: `You have ${unreadCount} new messages`
+                title: `${unreadCount} ${t.messages || 'new messages'}`
             });
         }
     }, [chatList, profile?.customUserId, activeFeed]);
@@ -78,7 +78,7 @@ const GSParivaarTab = ({ profile }) => {
 
     const handleCreatePost = async () => {
         if (!newPost.title || !newPost.content) {
-            Swal.fire('Error', 'Sabhi fields bharna zaruri hai', 'error');
+            Swal.fire(t.error || 'Error', t.underDevelopment || 'Sabhi fields bharna zaruri hai', 'error');
             return;
         }
 
@@ -120,7 +120,7 @@ const GSParivaarTab = ({ profile }) => {
             });
             setSelectedImage(null);
             setPreviewUrl(null);
-            Swal.fire('Success', 'Your post has been shared with the community!', 'success');
+            Swal.fire(t.success || 'Success', t.shareSomething || 'Your post has been shared with the community!', 'success');
         } else {
             // Check if error is related to image upload
             if (selectedImage && (result.message.toLowerCase().includes('upload') || result.message.toLowerCase().includes('cloudinary') || result.message.toLowerCase().includes('image'))) {
@@ -193,28 +193,28 @@ const GSParivaarTab = ({ profile }) => {
                         onClick={() => setActiveFeed('feed')}
                         className={`text-lg font-black uppercase tracking-tight transition-all relative ${activeFeed === 'feed' ? 'text-[#0c8182]' : 'text-slate-300'}`}
                     >
-                        Feed
+                        {t.feed}
                         {activeFeed === 'feed' && <motion.div layoutId="activeTab" className="absolute -bottom-2 left-0 right-0 h-1.5 bg-[#0c8182] rounded-full" />}
                     </button>
                     <button
                         onClick={() => setActiveFeed('myposts')}
                         className={`text-lg font-black uppercase tracking-tight transition-all relative ${activeFeed === 'myposts' ? 'text-[#0c8182]' : 'text-slate-300'}`}
                     >
-                        My Posts
+                        {t.myPosts}
                         {activeFeed === 'myposts' && <motion.div layoutId="activeTab" className="absolute -bottom-2 left-0 right-0 h-1.5 bg-[#0c8182] rounded-full" />}
                     </button>
                     <button
                         onClick={() => setActiveFeed('chats')}
                         className={`text-lg font-black uppercase tracking-tight transition-all relative ${activeFeed === 'chats' ? 'text-[#0c8182]' : 'text-slate-300'}`}
                     >
-                        Chats
+                        {t.chats}
                         {activeFeed === 'chats' && <motion.div layoutId="activeTab" className="absolute -bottom-2 left-0 right-0 h-1.5 bg-[#0c8182] rounded-full" />}
                     </button>
                     <button
                         onClick={() => setActiveFeed('friends')}
                         className={`text-lg font-black uppercase tracking-tight transition-all relative ${activeFeed === 'friends' ? 'text-[#0c8182]' : 'text-slate-300'}`}
                     >
-                        Friends
+                        {t.friends}
                         {activeFeed === 'friends' && <motion.div layoutId="activeTab" className="absolute -bottom-2 left-0 right-0 h-1.5 bg-[#0c8182] rounded-full" />}
                     </button>
                 </div>
@@ -225,7 +225,7 @@ const GSParivaarTab = ({ profile }) => {
                         className="flex items-center gap-2 px-5 py-2.5 bg-[#0c8182] text-white rounded-2xl font-black text-xs uppercase tracking-tight shadow-lg shadow-teal-900/10 hover:scale-105 active:scale-95 transition-all"
                     >
                         <Plus size={16} strokeWidth={3} />
-                        Create Post
+                        {t.createPost}
                     </button>
                 )}
             </div>
@@ -243,8 +243,8 @@ const GSParivaarTab = ({ profile }) => {
                             🎂
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black italic uppercase tracking-tight">Happy Birthday, {profile?.firstName}!</h2>
-                            <p className="text-teal-50/80 font-bold text-sm mt-1">Best wishes from the entire GharKeSeva community.</p>
+                            <h2 className="text-2xl font-black italic uppercase tracking-tight">{t.birthdayWishParivaar}, {profile?.firstName}!</h2>
+                            <p className="text-teal-50/80 font-bold text-sm mt-1">{t.birthdaySubParivaar}</p>
                         </div>
                     </div>
                 </motion.div>
@@ -262,7 +262,7 @@ const GSParivaarTab = ({ profile }) => {
                         <button onClick={() => setIsPosting(false)} className="p-2 text-slate-800 hover:bg-slate-50 rounded-full transition-all">
                             <X size={24} />
                         </button>
-                        <h3 className="text-lg font-black text-slate-900 tracking-tight">New post</h3>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight">{t.newPost}</h3>
                         <div className="flex gap-2">
                             <MoreHorizontal size={24} className="text-slate-400" />
                         </div>
@@ -275,7 +275,7 @@ const GSParivaarTab = ({ profile }) => {
                         <div>
                             <h4 className="font-black text-slate-900 leading-tight">{profile?.firstName} {profile?.lastName}</h4>
                             <div className="flex items-center gap-1 mt-0.5 px-2 py-0.5 bg-slate-100 rounded-lg text-[9px] font-black uppercase text-slate-500 tracking-tighter w-fit">
-                                <Globe size={10} /> Public
+                                <Globe size={10} /> {t.public}
                             </div>
                         </div>
                     </div>
@@ -314,7 +314,7 @@ const GSParivaarTab = ({ profile }) => {
 
                     <div className="space-y-4 px-2">
                         <textarea
-                            placeholder="What's on your mind?"
+                            placeholder={t.whatsOnMind}
                             rows={4}
                             className="w-full px-0 py-2 bg-white border-none text-xl font-medium text-slate-600 placeholder:text-slate-300 focus:outline-none resize-none"
                             value={newPost.content}
@@ -337,7 +337,7 @@ const GSParivaarTab = ({ profile }) => {
                     <div className="flex items-center justify-between pt-4 px-2 border-t border-slate-50">
                         <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-500 rounded-xl cursor-pointer hover:bg-slate-100 transition-all font-bold text-xs uppercase tracking-tight">
                             <ImageIcon size={18} />
-                            Add Photo
+                            {t.addPhoto}
                             <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                         </label>
                         <div className="flex gap-3">
@@ -346,7 +346,7 @@ const GSParivaarTab = ({ profile }) => {
                                 disabled={!newPost.content}
                                 className={`px-10 py-3 rounded-2xl font-black uppercase tracking-tight transition-all shadow-lg ${(!newPost.content) ? 'bg-slate-100 text-slate-300' : 'bg-[#0c8182] text-white shadow-[#0c8182]/20 hover:scale-105 active:scale-95'}`}
                             >
-                                Post
+                                {t.post}
                             </button>
                         </div>
                     </div>
@@ -359,6 +359,7 @@ const GSParivaarTab = ({ profile }) => {
                     chatList={chatList}
                     selectedChat={selectedChat}
                     setSelectedChat={setSelectedChat}
+                    t={t}
                 />
             ) : activeFeed === 'friends' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -375,7 +376,7 @@ const GSParivaarTab = ({ profile }) => {
                                 </div>
                                 <div>
                                     <h4 className="font-black text-slate-900 text-sm tracking-tight uppercase truncate">{friend.firstName} {friend.lastName}</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">{friend.isOnline ? 'Active Now' : 'Offline'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">{friend.isOnline ? t.activeNow : t.offline}</p>
                                 </div>
                             </div>
                             <div className="space-y-4">
@@ -391,7 +392,7 @@ const GSParivaarTab = ({ profile }) => {
                                     className="w-full py-3 bg-[#0c8182] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-900/10 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
                                 >
                                     <MessageSquare size={14} />
-                                    Send Message
+                                    {t.sendMsg}
                                 </button>
                             </div>
                         </div>
@@ -400,8 +401,8 @@ const GSParivaarTab = ({ profile }) => {
                             <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center text-slate-200">
                                 <Users size={40} />
                             </div>
-                            <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">No friends yet</h3>
-                            <p className="text-sm font-bold text-slate-400">Start connecting with other vendors from the feed.</p>
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">{t.noFriends}</h3>
+                            <p className="text-sm font-bold text-slate-400">{t.startConnecting}</p>
                         </div>
                     )}
                 </div>
@@ -415,15 +416,15 @@ const GSParivaarTab = ({ profile }) => {
                                     <Users size={24} />
                                 </div>
                                 <div>
-                                    <h4 className="font-black text-slate-900 text-sm tracking-tight uppercase">Friend Requests</h4>
-                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter">{profile.pendingRequests.length} vendors want to connect with you</p>
+                                    <h4 className="font-black text-slate-900 text-sm tracking-tight uppercase">{t.friendRequests}</h4>
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter">{profile.pendingRequests.length} {t.vendorsConnect}</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setActiveFeed('chats')}
                                 className="px-5 py-2.5 bg-white text-amber-600 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-amber-100 hover:bg-amber-100 transition-all shadow-sm"
                             >
-                                View All
+                                {t.seeAll}
                             </button>
                         </div>
                     )}
@@ -434,9 +435,9 @@ const GSParivaarTab = ({ profile }) => {
                             <div className="flex items-center justify-between mb-6 px-2">
                                 <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase italic flex items-center gap-2">
                                     <Users size={20} className="text-[#0c8182]" />
-                                    People you may know
+                                    {t.peopleKnow}
                                 </h3>
-                                <button className="text-xs font-bold text-slate-400 hover:text-[#0c8182] uppercase tracking-widest transition-all">See all</button>
+                                <button className="text-xs font-bold text-slate-400 hover:text-[#0c8182] uppercase tracking-widest transition-all">{t.seeAll}</button>
                             </div>
                             <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 scrollbar-hide">
                                 {suggestions.map((vendor) => (
@@ -462,10 +463,10 @@ const GSParivaarTab = ({ profile }) => {
                                                 onClick={() => dispatch(sendConnectionRequest(profile.customUserId, vendor.customUserId))}
                                                 className="w-full py-2.5 bg-[#0c8182] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-900/10 hover:scale-[1.02] active:scale-95 transition-all"
                                             >
-                                                Add Friend
+                                                {t.addFriend}
                                             </button>
                                             <button className="w-full py-2.5 bg-slate-50 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">
-                                                Remove
+                                                {t.remove}
                                             </button>
                                         </div>
                                     </div>
@@ -483,6 +484,7 @@ const GSParivaarTab = ({ profile }) => {
                                         key={post._id}
                                         post={post}
                                         profile={profile}
+                                        t={t}
                                     />
                                 ))
                             ) : (
@@ -490,8 +492,8 @@ const GSParivaarTab = ({ profile }) => {
                                     <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-200">
                                         <MessageSquare size={40} />
                                     </div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">No posts found</h3>
-                                    <p className="text-sm font-bold text-slate-400">Share something to join the GharKeSeva community.</p>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">{t.noPosts}</h3>
+                                    <p className="text-sm font-bold text-slate-400">{t.noPostsSub}</p>
                                 </div>
                             )}
                         </AnimatePresence>
@@ -502,7 +504,7 @@ const GSParivaarTab = ({ profile }) => {
     );
 };
 
-const PostCard = ({ post, profile }) => {
+const PostCard = ({ post, profile, t }) => {
     const dispatch = useDispatch();
     const [likes, setLikes] = useState(typeof post.likes === 'number' ? post.likes : (post.likedBy?.length || 0));
     const [claps, setClaps] = useState(post.claps || 0);
@@ -536,8 +538,8 @@ const PostCard = ({ post, profile }) => {
     const handleCopyLink = () => {
         navigator.clipboard.writeText(`${window.location.origin}/post/${post._id}`);
         Swal.fire({
-            title: 'Copied!',
-            text: 'Link to this post has been copied to clipboard.',
+            title: t.copyLink,
+            text: t.copyLink,
             icon: 'success',
             timer: 1500,
             showConfirmButton: false
@@ -566,22 +568,22 @@ const PostCard = ({ post, profile }) => {
     const handleDelete = async () => {
         setIsMenuOpen(false);
         const result = await Swal.fire({
-            title: 'Are you sure?',
-            text: "This post will be deleted permanently!",
+            title: t.deletePost,
+            text: t.deletePost,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#0c8182',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, Delete',
-            cancelButtonText: 'No'
+            confirmButtonText: t.accept,
+            cancelButtonText: t.ignore
         });
 
         if (result.isConfirmed) {
             const res = await dispatch(deletePost(post._id, profile?.customUserId));
             if (res.success) {
-                Swal.fire('Deleted!', 'Post has been removed.', 'success');
+                Swal.fire(t.deletePost, t.success, 'success');
             } else {
-                Swal.fire('Error', 'Could not delete the post.', 'error');
+                Swal.fire(t.error, t.underDevelopment, 'error');
             }
         }
     };
@@ -590,10 +592,8 @@ const PostCard = ({ post, profile }) => {
         setNotificationsEnabled(!notificationsEnabled);
         setIsMenuOpen(false);
         Swal.fire({
-            title: notificationsEnabled ? 'Notifications Off' : 'Notifications On',
-            text: notificationsEnabled
-                ? 'You will no longer receive notifications for this post.'
-                : 'You will now receive notifications for this post.',
+            title: notificationsEnabled ? t.turnOffNotifications : t.turnOnNotifications,
+            text: notificationsEnabled ? t.turnOffNotifications : t.turnOnNotifications,
             icon: 'success',
             timer: 2000,
             showConfirmButton: false
@@ -645,11 +645,11 @@ const PostCard = ({ post, profile }) => {
 
     const timeAgo = (date) => {
         const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-        if (seconds < 60) return 'Just now';
+        if (seconds < 60) return t.justNow || 'Just now';
         const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes}m ago`;
+        if (minutes < 60) return `${minutes}${t.minAgo || 'm ago'}`;
         const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours}h ago`;
+        if (hours < 24) return `${hours}${t.hoursAgo || 'h ago'}`;
         return new Date(date).toLocaleDateString();
     };
 
@@ -675,11 +675,11 @@ const PostCard = ({ post, profile }) => {
                             {post.isOfficial && <ShieldCheck size={14} className="text-blue-500" fill="currentColor" />}
                             {post.taggedPeople && post.taggedPeople.length > 0 && (
                                 <span className="text-[11px] font-bold text-slate-400">
-                                    with <span className="text-slate-900">{post.taggedPeople[0]}</span>
-                                    {post.taggedPeople.length > 1 && ` and ${post.taggedPeople.length - 1} others`}
+                                    {t.with || 'with'} <span className="text-slate-900">{post.taggedPeople[0]}</span>
+                                    {post.taggedPeople.length > 1 && ` ${t.and || 'and'} ${post.taggedPeople.length - 1} ${t.others || 'others'}`}
                                 </span>
                             )}
-                            {post.feeling && <span className="text-[11px] font-bold text-slate-400 italic">is feeling {post.feeling}</span>}
+                            {post.feeling && <span className="text-[11px] font-bold text-slate-400 italic">{t.isFeeling || 'is feeling'} {post.feeling}</span>}
                             {post.location && <span className="flex items-center gap-1 text-[11px] font-black text-[#0c8182] uppercase tracking-tighter"><MapPin size={10} /> {post.location}</span>}
                         </div>
                         <div className="flex items-center gap-2">
@@ -709,8 +709,8 @@ const PostCard = ({ post, profile }) => {
                                         {notificationsEnabled ? <BellOff size={18} /> : <Bell size={18} />}
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black text-slate-900 tracking-tight">{notificationsEnabled ? 'Turn off notifications' : 'Turn on notifications'}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">For this post</p>
+                                        <p className="text-xs font-black text-slate-900 tracking-tight">{notificationsEnabled ? t.turnOffNotifications : t.turnOnNotifications}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t.parivaar}</p>
                                     </div>
                                 </button>
 
@@ -719,8 +719,8 @@ const PostCard = ({ post, profile }) => {
                                         <Bookmark size={18} fill={isSaved ? 'currentColor' : 'none'} />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black text-slate-900 tracking-tight">{isSaved ? 'Unsave post' : 'Save post'}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{isSaved ? 'Remove from saved items' : 'Add to your saved items'}</p>
+                                        <p className="text-xs font-black text-slate-900 tracking-tight">{isSaved ? t.unsavePost : t.savePost}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{isSaved ? t.remove : t.add}</p>
                                     </div>
                                 </button>
 
@@ -730,7 +730,7 @@ const PostCard = ({ post, profile }) => {
                                             <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-900 rounded-xl transition-all">
                                                 <Pencil size={18} />
                                             </div>
-                                            <p className="text-xs font-black text-slate-900 tracking-tight">Edit post</p>
+                                            <p className="text-xs font-black text-slate-900 tracking-tight">{t.editPost}</p>
                                         </button>
                                         <button
                                             onClick={handleDelete}
@@ -739,7 +739,7 @@ const PostCard = ({ post, profile }) => {
                                             <div className="p-2.5 bg-rose-50 text-rose-500 rounded-xl">
                                                 <Trash2 size={18} />
                                             </div>
-                                            <p className="text-xs font-black text-rose-500 tracking-tight uppercase">Delete Post</p>
+                                            <p className="text-xs font-black text-rose-500 tracking-tight uppercase">{t.deletePost}</p>
                                         </button>
                                     </>
                                 )}
@@ -751,7 +751,7 @@ const PostCard = ({ post, profile }) => {
                                     <div className="p-2.5 bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-[#0c8182] rounded-xl transition-all">
                                         <LinkIcon size={18} />
                                     </div>
-                                    <p className="text-xs font-black text-slate-900 tracking-tight">Copy link</p>
+                                    <p className="text-xs font-black text-slate-900 tracking-tight">{t.copyLink}</p>
                                 </button>
                             </motion.div>
                         )}
@@ -766,7 +766,7 @@ const PostCard = ({ post, profile }) => {
                         <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4">
                             <div className="flex items-center gap-2 mb-3">
                                 <Pencil size={16} className="text-blue-600" />
-                                <p className="text-xs font-black text-blue-700 uppercase tracking-wider">Editing Post</p>
+                                <p className="text-xs font-black text-blue-700 uppercase tracking-wider">{t.editingPost || 'Editing Post'}</p>
                             </div>
                             <textarea
                                 value={editedContent}
@@ -855,7 +855,7 @@ const PostCard = ({ post, profile }) => {
                                 <div className="flex-1 relative">
                                     <input
                                         type="text"
-                                        placeholder="Add a comment..."
+                                        placeholder={t.typeMessage || "Add a comment..."}
                                         className="w-full pl-6 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         value={commentText}
                                         onChange={(e) => setCommentText(e.target.value)}
@@ -890,7 +890,7 @@ const PostCard = ({ post, profile }) => {
                                     ))
                                 ) : (
                                     <div className="py-8 text-center bg-slate-50/30 rounded-[2rem] border border-dashed border-slate-100">
-                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Pehle comment karein!</p>
+                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">{t.noPostsSub || 'Pehle comment karein!'}</p>
                                     </div>
                                 )}
                             </div>
@@ -909,7 +909,7 @@ const ClapIcon = ({ size }) => (
     </svg>
 );
 
-const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat }) => {
+const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat, t }) => {
     const dispatch = useDispatch();
     const [messages, setMessages] = useState([]);
     const [msgText, setMsgText] = useState('');
@@ -967,13 +967,13 @@ const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat }) => {
                 <div className="p-6 border-b border-slate-50">
                     <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase italic flex items-center gap-2">
                         <MessageSquare size={18} className="text-[#0c8182]" />
-                        Messages
+                        {t.messages}
                     </h3>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                     {pendingProfiles.length > 0 && (
                         <div className="mb-6 space-y-2">
-                            <h4 className="px-4 text-[10px] font-black text-amber-500 uppercase tracking-widest mb-2">Pending Requests</h4>
+                            <h4 className="px-4 text-[10px] font-black text-amber-500 uppercase tracking-widest mb-2">{t.pendingRequests}</h4>
                             {pendingProfiles.map(p => (
                                 <div key={p.customUserId} className="p-4 bg-amber-50 rounded-[2rem] border border-amber-100">
                                     <div className="flex items-center gap-3 mb-3">
@@ -990,10 +990,10 @@ const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat }) => {
                                             onClick={() => dispatch(acceptConnectionRequest(profile.customUserId, p.customUserId))}
                                             className="flex-1 py-2 bg-[#0c8182] text-white rounded-xl text-[9px] font-black uppercase tracking-tighter"
                                         >
-                                            Accept
+                                            {t.accept}
                                         </button>
                                         <button className="flex-1 py-2 bg-white text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-tighter border border-slate-100">
-                                            Ignore
+                                            {t.ignore}
                                         </button>
                                     </div>
                                 </div>
@@ -1001,7 +1001,7 @@ const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat }) => {
                         </div>
                     )}
 
-                    <h4 className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-4">Active Chats</h4>
+                    <h4 className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-4">{t.activeChats}</h4>
                     {chatList.length > 0 ? chatList.map(chat => (
                         <button
                             key={chat.customUserId}
@@ -1016,13 +1016,13 @@ const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat }) => {
                             </div>
                             <div className="text-left flex-1 min-w-0">
                                 <h4 className="font-black text-xs uppercase tracking-tight truncate">{chat.firstName} {chat.lastName}</h4>
-                                <p className="text-[10px] font-bold text-slate-400 truncate uppercase mt-0.5 italic">{chat.lastMessage?.content || 'Say hello!'}</p>
+                                <p className="text-[10px] font-bold text-slate-400 truncate uppercase mt-0.5 italic">{chat.lastMessage?.content || t.typeMessage}</p>
                             </div>
                         </button>
                     )) : (
                         <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-slate-50/50 rounded-[2rem]">
                             <Users size={32} className="text-slate-200 mb-2" />
-                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Connect with vendors to chat</p>
+                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{t.startConnecting}</p>
                         </div>
                     )}
                 </div>
@@ -1043,7 +1043,7 @@ const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat }) => {
                             <div>
                                 <h4 className="font-black text-slate-900 text-xs uppercase tracking-tight">{selectedChat.firstName} {selectedChat.lastName}</h4>
                                 <p className={`text-[10px] font-bold uppercase tracking-tighter ${selectedChat.isOnline ? 'text-emerald-500' : 'text-slate-300'}`}>
-                                    {selectedChat.isOnline ? 'Active now' : 'Offline'}
+                                    {selectedChat.isOnline ? t.activeNow : t.offline}
                                 </p>
                             </div>
                         </div>
@@ -1068,7 +1068,7 @@ const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat }) => {
                         <form onSubmit={handleSend} className="relative">
                             <input
                                 type="text"
-                                placeholder="Type a message..."
+                                placeholder={t.typeMessage}
                                 className="w-full pl-6 pr-16 py-4 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-bold focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
                                 value={msgText}
                                 onChange={(e) => setMsgText(e.target.value)}
@@ -1088,8 +1088,8 @@ const VendorChat = ({ profile, chatList, selectedChat, setSelectedChat }) => {
                     <div className="w-24 h-24 bg-teal-50 rounded-[3rem] flex items-center justify-center text-[#0c8182] mb-6 shadow-inner">
                         <Sparkles size={40} />
                     </div>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic mb-2">Connect & Grow Together</h3>
-                    <p className="text-sm font-bold text-slate-400 max-w-sm">Select a vendor from the list or add new friends from the feed to start chatting.</p>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic mb-2">{t.connectGrow}</h3>
+                    <p className="text-sm font-bold text-slate-400 max-w-sm">{t.selectVendorChat}</p>
                 </div>
             )}
         </div>

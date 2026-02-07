@@ -313,7 +313,6 @@ function VendorPanel() {
   const mainNavItems = [
     { id: 'home', label: t.home, icon: LayoutDashboard },
     { id: 'history', label: t.history, icon: History },
-    { id: 'team', label: t.team, icon: Users },
     { id: 'wallet', label: t.wallet, icon: Wallet },
     { id: 'hub', label: t.hub, icon: Briefcase },
     { id: 'parivaar', label: t.parivaar, icon: Sparkles },
@@ -344,26 +343,26 @@ function VendorPanel() {
       navigator.share({ title: 'GharKeSeva Partner', text: shareText, url: shareUrl });
     } else {
       Swal.fire({
-        title: 'Refer & Earn',
+        title: t.referAndEarn,
         html: `<div class="p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                  <p class="text-xs font-bold text-slate-400 uppercase mb-2">Your Referral Code</p>
+                  <p class="text-xs font-bold text-slate-400 uppercase mb-2">${t.referralCode}</p>
                   <p class="text-2xl font-black text-indigo-600 tracking-widest">${refCode}</p>
                  </div>
-                 <p class="mt-4 text-sm text-slate-500">Share this code with your friends to join GharKeSeva!</p>`,
-        confirmButtonText: 'Copy Link',
+                 <p class="mt-4 text-sm text-slate-500">${t.shareReferral}</p>`,
+        confirmButtonText: t.copyLink,
         showCancelButton: true,
-        cancelButtonText: 'Close'
+        cancelButtonText: t.close
       }).then((result) => {
         if (result.isConfirmed) {
           navigator.clipboard.writeText(shareUrl);
-          Swal.fire('Copied!', 'Referral link copied to clipboard.', 'success');
+          Swal.fire(t.copyLink, t.referralCopied, 'success');
         }
       });
     }
   };
 
   const mobileNavItems = [
-    { id: 'team', label: t.team, icon: Users },
+    { id: 'parivaar', label: t.parivaar, icon: Sparkles },
     { id: 'wallet', label: t.wallet, icon: Wallet },
     { id: 'home', label: t.home, icon: LayoutDashboard },
     { id: 'offers', label: t.offers, icon: Tag },
@@ -409,17 +408,17 @@ function VendorPanel() {
           <AnimatePresence mode="wait">
             {loading ? <div className="flex justify-center py-32"><Loader2 className="animate-spin text-indigo-600" size={40} /></div> : (
               <motion.div key={`tab-${activeTab}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-                {activeTab === 'home' && <HomeTab {...{ profile, jobs, showAllJobs, setShowAllJobs, onChat: openChat, onAccept: (id) => handleBookingAction(id, 'accept'), onReject: (id) => handleBookingAction(id, 'reject'), onComplete: setOtpModalId, isActionLoading }} />}
-                {activeTab === 'wallet' && <WalletTab profile={profile} onBack={() => setActiveTab('home')} />}
-                {activeTab === 'dashboard' && <StatsTab {...{ profile, history, jobs }} />}
-                {activeTab === 'history' && <HistoryTab history={history} />}
-                {activeTab === 'offers' && <VendorCoupons />} {/* New Tab Render */}
-                {activeTab === 'profile' && <ProfileTab profile={profile} setIsReviewsModalOpen={setIsReviewsModalOpen} setActiveTab={setActiveTab} setIsCatModalOpen={setIsCatModalOpen} />}
-                {activeTab === 'help' && <HelpCenterTab profile={profile} />}
-                {activeTab === 'financial' && <FinancialDetailsTab profile={profile} onBack={() => setActiveTab('home')} onGoToWallet={() => setActiveTab('wallet')} />}
-                {activeTab === 'team' && <MyTeamTab onBack={() => setActiveTab('home')} />}
-                {activeTab === 'hub' && <MyHubTab profile={profile} onBack={() => setActiveTab('home')} />}
-                {activeTab === 'parivaar' && <GSParivaarTab profile={profile} />}
+                {activeTab === 'home' && <HomeTab {...{ profile, jobs, showAllJobs, setShowAllJobs, onChat: openChat, onAccept: (id) => handleBookingAction(id, 'accept'), onReject: (id) => handleBookingAction(id, 'reject'), onComplete: setOtpModalId, isActionLoading, t }} />}
+                {activeTab === 'wallet' && <WalletTab profile={profile} onBack={() => setActiveTab('home')} t={t} />}
+                {activeTab === 'dashboard' && <StatsTab {...{ profile, history, jobs, t }} />}
+                {activeTab === 'history' && <HistoryTab history={history} t={t} />}
+                {activeTab === 'offers' && <VendorCoupons t={t} />} {/* New Tab Render */}
+                {activeTab === 'profile' && <ProfileTab profile={profile} setIsReviewsModalOpen={setIsReviewsModalOpen} setActiveTab={setActiveTab} setIsCatModalOpen={setIsCatModalOpen} t={t} />}
+                {activeTab === 'help' && <HelpCenterTab profile={profile} t={t} />}
+                {activeTab === 'financial' && <FinancialDetailsTab profile={profile} onBack={() => setActiveTab('home')} onGoToWallet={() => setActiveTab('wallet')} t={t} />}
+                {activeTab === 'team' && <MyTeamTab onBack={() => setActiveTab('home')} t={t} />}
+                {activeTab === 'hub' && <MyHubTab profile={profile} onBack={() => setActiveTab('home')} t={t} />}
+                {activeTab === 'parivaar' && <GSParivaarTab profile={profile} t={t} />}
               </motion.div>
             )}
           </AnimatePresence>
